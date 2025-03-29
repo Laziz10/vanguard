@@ -53,7 +53,7 @@ speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_title
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("###Speaker Analysis")
+    st.markdown("### Speaker Analysis")
 
     selected_speaker = st.selectbox(
         label="Speaker Dropdown",

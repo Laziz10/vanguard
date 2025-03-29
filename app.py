@@ -25,7 +25,7 @@ def load_css():
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 load_css()
 
-# OpenAI API key securely from Streamlit secrets
+# OpenAI API key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
@@ -36,18 +36,23 @@ with st.sidebar:
 
     st.markdown("### **Call Participants**", unsafe_allow_html=True)
 
-    speakers = [
-        "All",
-        "Christopher Locke Peirce",
-        "Hamid Talal Mirza",
-        "Neeti Bhalla Johnson",
-        "Robert Pietsch",
-        "Timothy Michael Sweeney",
-        "Vlad Yakov Barbalat",
-        "Chad Stogel"
-    ]
+    speaker_titles = {
+        "Christopher Locke Peirce": "Executive VP & CFO",
+        "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
+        "Neeti Bhalla Johnson": "Executive VP, President of Global Risk Solutions & Director",
+        "Robert Pietsch": "",
+        "Timothy Michael Sweeney": "President, CEO & Director",
+        "Vlad Yakov Barbalat": "Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director",
+        "Chad Stogel": "Spectrum Asset Management, Inc."
+    }
 
+    speakers = ["All"] + list(speaker_titles.keys())
     selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers)
+
+    if selected_speaker != "All":
+        title = speaker_titles.get(selected_speaker, "")
+        if title:
+            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
 
 # Main UI
 st.image("vanguard_logo.png", width=180)
@@ -59,7 +64,7 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Filter by speaker if not "All"
+    # Filter transcript by selected speaker
     if selected_speaker != "All":
         speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
         matches = speaker_pattern.findall(raw_text)
@@ -69,17 +74,17 @@ if uploaded_file:
             st.warning(f"No speech found for {selected_speaker}. Displaying empty result.")
             raw_text = ""
 
-    # Set fixed chunk size
+    # Text splitting
     chunk_size = 500
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = splitter.create_documents([raw_text])
 
     try:
-        # Embedding
+        # Embeddings and vectorstore
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_documents(chunks, embeddings)
 
-        # LLM for summary
+        # LLM summary
         llm = ChatOpenAI(temperature=0)
         summary_prompt = (
             "Summarize the earnings call into four main sections:\n"
@@ -91,7 +96,7 @@ if uploaded_file:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format sectioned summary
+        # Format summary
         styled_summary = ""
         raw_lines = response.split("\n")
 
@@ -132,13 +137,12 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
 
-    # Chat-style Q&A section
+    # Q&A
     st.markdown("### Ask a Question")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Define Q&A callback
     def handle_question():
         user_input = st.session_state.chat_input.strip()
         if not user_input:
@@ -153,13 +157,11 @@ if uploaded_file:
         )
         answer = qa_chain.run(user_input)
         st.session_state.chat_history.append({"role": "ai", "content": answer})
+        st.session_state.chat_input = ""
 
-        st.session_state.chat_input = ""  # Clear input
-
-    # Input box with callback
     st.text_input("", key="chat_input", on_change=handle_question)
 
-    # Display Q&A side-by-side
+    # Display Q&A
     qa_pairs = []
     temp = {}
 

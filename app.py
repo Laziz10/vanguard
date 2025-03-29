@@ -49,6 +49,8 @@ if "selected_speaker" not in st.session_state:
     st.session_state.selected_speaker = "All"
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "selected_benchmark" not in st.session_state:
+    st.session_state.selected_benchmark = "VGT"
 
 # Updated Speakers List with positions in braces
 speaker_titles = {
@@ -58,19 +60,15 @@ speaker_titles = {
     "Alice Jolla": "CAO"
 }
 speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_titles.items()]
+benchmark_stocks = ["VGT", "GOOGL", "APPL", "AMZN"]
 
 # --- Sidebar ---
 with st.sidebar:
+    # Speaker Analysis
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
         unsafe_allow_html=True
     )
-
-    # Ensure session state is initialized
-    if "selected_speaker" not in st.session_state:
-        st.session_state.selected_speaker = "All"
-
-    # Safe dropdown handling with a fallback if index is out of range
     selected_speaker = st.selectbox(
         label="Speaker Dropdown",
         options=speakers,
@@ -79,9 +77,21 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
-    # Do not show the name of the speaker or title under the dropdown after selection
-    # Simply leave this section empty without additional information under the dropdown
+    # Benchmark Analysis
+    st.markdown(
+        "<div style='color:white; font-weight:bold; font-size:18px; margin-top:1rem; margin-bottom:0.25rem;'>Benchmark Analysis</div>",
+        unsafe_allow_html=True
+    )
+    selected_benchmark = st.selectbox(
+        label="Benchmark Dropdown",
+        options=benchmark_stocks,
+        index=benchmark_stocks.index(st.session_state.selected_benchmark),
+        label_visibility="collapsed",
+        key="benchmark_dropdown"
+    )
+    st.session_state.selected_benchmark = selected_benchmark
 
+    # File upload
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -89,13 +99,27 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# Session values
-uploaded_file = st.session_state.uploaded_file
-selected_speaker = st.session_state.selected_speaker
-
 # --- Main Area ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
+
+uploaded_file = st.session_state.uploaded_file
+selected_speaker = st.session_state.selected_speaker
+selected_benchmark = st.session_state.selected_benchmark
+
+def handle_question(vectorstore, llm):
+    user_input = st.session_state.chat_input.strip()
+    if not user_input:
+        return
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        chain_type="stuff"
+    )
+    answer = qa_chain.run(user_input)
+    st.session_state.chat_history.append({"role": "ai", "content": answer})
+    st.session_state.chat_input = ""
 
 if uploaded_file:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
@@ -103,13 +127,10 @@ if uploaded_file:
         raw_text = "".join([page.get_text() for page in doc])
 
     if selected_speaker != "All":
-        # Extracting name without title for matching
-        speaker_name_for_matching = selected_speaker.split(" (")[0] if selected_speaker != "All" else "All"
-
-        # Updated regex for case-insensitive matching and handling the colon after the name
+        speaker_name_for_matching = selected_speaker.split(" (")[0]
         pattern = re.compile(
-            rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
-            re.DOTALL | re.IGNORECASE  # Case-insensitive matching
+            rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=(?:[A-Z][a-z]+\s*){{1,3}}:\s|$)",
+            re.DOTALL
         )
         matches = pattern.findall(raw_text)
         raw_text = "\n".join(matches).strip() if matches else ""
@@ -216,18 +237,3 @@ if uploaded_file:
                 st.warning(f"Could not generate follow-up questions: {e}")
         else:
             st.info("Transcript not available for generating follow-up questions.")
-
-# Q&A handler
-def handle_question(vectorstore, llm):
-    user_input = st.session_state.chat_input.strip()
-    if not user_input:
-        return
-    st.session_state.chat_history.append({"role": "user", "content": user_input})
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=vectorstore.as_retriever(),
-        chain_type="stuff"
-    )
-    answer = qa_chain.run(user_input)
-    st.session_state.chat_history.append({"role": "ai", "content": answer})
-    st.session_state.chat_input = ""

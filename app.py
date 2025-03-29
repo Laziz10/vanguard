@@ -24,7 +24,7 @@ st.markdown("""
         padding-top: 1rem;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 0.7rem !important;
+        padding-top: 0.3rem !important;
     }
     </style>
 """, unsafe_allow_html=True)

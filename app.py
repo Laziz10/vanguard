@@ -34,45 +34,8 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
-# Normalize and tag speakers using last name lookup
-def relabel_speakers(text, speaker_map):
-    lines = text.split("\n")
-    new_lines = []
-    for line in lines:
-        match = re.match(r"^([A-Z][a-z]+(?: [A-Z][a-z]+)?)\s*:", line)
-        if match:
-            name = match.group(1).split()[-1]  # get last name
-            full_label = speaker_map.get(name, name)
-            new_line = line.replace(match.group(0), f"{full_label}:")
-            new_lines.append(new_line)
-        else:
-            new_lines.append(line)
-    return "\n".join(new_lines)
-
-# Extract speaker mapping from "Call Participants" section
-def extract_participant_mapping(text):
-    match = re.search(r"Call Participants(.*?)(?=\n\n|\n\s*Q\s*&\s*A|\n\s*Operator:)", text, re.DOTALL | re.IGNORECASE)
-    if not match:
-        return {}
-
-    block = match.group(1)
-    lines = [line.strip() for line in block.strip().split("\n") if line.strip()]
-
-    speaker_map = {}
-    i = 0
-    while i < len(lines) - 1:
-        name_line = lines[i]
-        title_line = lines[i + 1]
-
-        if any(char.isalpha() for char in name_line) and any(char.isalpha() for char in title_line):
-            last_name = name_line.strip().split()[-1]
-            full_label = f"{name_line} – {title_line}"
-            speaker_map[last_name] = full_label
-            i += 2
-        else:
-            i += 1
-
-    return speaker_map
+    st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
+    selected_speaker = st.selectbox("Speaker", ["All"])
 
 # Main UI
 st.image("vanguard_logo.png", width=180)
@@ -84,60 +47,23 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Automatically extract speaker mapping from Call Participants section
-    participant_map = extract_participant_mapping(raw_text)
-
-    # Relabel transcript speaker lines using map
-    raw_text = relabel_speakers(raw_text, participant_map)
-
-    # DEBUG: Show first 1000 chars of relabeled transcript
-    st.code(raw_text[:1000], language="text")
-
-    # Try to extract speaker segments with name and title (updated regex)
-    speaker_blocks = re.findall(
-        r"([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+):\s*(.*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+:|\Z)",
-        raw_text,
-        re.DOTALL
-    )
-
-    speaker_dict = {}
-
-    if speaker_blocks:
-        for name_title, speech in speaker_blocks:
-            key = name_title.strip()
-            speaker_dict.setdefault(key, "")
-            speaker_dict[key] += speech.strip() + "\n"
-    else:
-        speaker_dict = {"Unknown Speaker": raw_text}
-
-    all_speakers = ["All"] + sorted(speaker_dict.keys())
-
-    with st.sidebar:
-        st.markdown("### **Call Participants**", unsafe_allow_html=True)
-        selected_speaker = st.selectbox("Call Participant", all_speakers, index=0)
-        st.sidebar.write("🔍 Speakers detected:", list(speaker_dict.keys()))
-
+    # Optional: Speaker filtering
     if selected_speaker != "All":
-        raw_text = speaker_dict.get(selected_speaker, "")
-    else:
-        raw_text = "\n".join(speaker_dict.values())
+        speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
+        matches = speaker_pattern.findall(raw_text)
+        raw_text = "\n".join(matches)
 
-    if not raw_text.strip():
-        st.warning("No valid transcript text found.")
-        st.stop()
-
+    # Set fixed chunk size
     chunk_size = 500
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = splitter.create_documents([raw_text])
 
-    if not chunks:
-        st.warning("No valid chunks could be created from the transcript.")
-        st.stop()
-
     try:
+        # Embedding
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_documents(chunks, embeddings)
 
+        # LLM for summary
         llm = ChatOpenAI(temperature=0)
         summary_prompt = (
             "Summarize the earnings call into four main sections:\n"
@@ -149,9 +75,11 @@ if uploaded_file:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
+        # Format sectioned summary
         styled_summary = ""
         raw_lines = response.split("\n")
 
+        # Filter out empty lines and disclaimers
         lines = [
             line.strip() for line in raw_lines
             if line.strip()
@@ -189,11 +117,13 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
 
+    # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
+    # Define Q&A callback
     def handle_question():
         user_input = st.session_state.chat_input.strip()
         if not user_input:
@@ -209,10 +139,12 @@ if uploaded_file:
         answer = qa_chain.run(user_input)
         st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-        st.session_state.chat_input = ""
+        st.session_state.chat_input = ""  # Clear input
 
+    # Input box with callback
     st.text_input("", key="chat_input", on_change=handle_question)
 
+    # Display Q&A side-by-side (most recent first)
     qa_pairs = []
     temp = {}
 

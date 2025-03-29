@@ -9,3 +9,7 @@ tiktoken
 fpdf
 yfinance==0.1.70
 reportlab
+matplotlib
+
+
+

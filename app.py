@@ -34,6 +34,9 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
+    if uploaded_file:
+        st.success("✅ File uploaded successfully")  # Show success without displaying filename
+
     st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Speaker", ["All"])
 
@@ -53,13 +56,13 @@ if uploaded_file:
         matches = speaker_pattern.findall(raw_text)
         raw_text = "\n".join(matches)
 
-    # Set fixed chunk size
+    # Split into chunks
     chunk_size = 500
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = splitter.create_documents([raw_text])
 
     try:
-        # Embedding
+        # Embedding and Vectorstore
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_documents(chunks, embeddings)
 
@@ -75,11 +78,9 @@ if uploaded_file:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format sectioned summary
+        # Clean and format summary
         styled_summary = ""
         raw_lines = response.split("\n")
-
-        # Filter out empty lines and disclaimers
         lines = [
             line.strip() for line in raw_lines
             if line.strip()
@@ -117,13 +118,12 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
 
-    # Chat-style Q&A section
+    # Chat-style Q&A
     st.markdown("### Ask a Question")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Define Q&A callback
     def handle_question():
         user_input = st.session_state.chat_input.strip()
         if not user_input:
@@ -141,10 +141,8 @@ if uploaded_file:
 
         st.session_state.chat_input = ""  # Clear input
 
-    # Input box with callback
     st.text_input("", key="chat_input", on_change=handle_question)
 
-    # Display Q&A side-by-side (most recent first)
     qa_pairs = []
     temp = {}
 

@@ -29,32 +29,39 @@ load_css()
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Sidebar
+# --- Sidebar Logic ---
 with st.sidebar:
-    st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("", type=["pdf"])
+    if "uploaded_file" not in st.session_state:
+        st.session_state.uploaded_file = None
 
-    st.markdown("### **Call Participants**", unsafe_allow_html=True)
+    if st.session_state.uploaded_file is None:
+        st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
+        uploaded = st.file_uploader("", type=["pdf"])
+        if uploaded:
+            st.session_state.uploaded_file = uploaded
+    else:
+        st.markdown("### **Call Participants**", unsafe_allow_html=True)
 
-    speaker_titles = {
-        "Christopher Locke Peirce": "Executive VP & CFO",
-        "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
-        "Neeti Bhalla Johnson": "Executive VP, President of Global Risk Solutions & Director",
-        "Robert Pietsch": "",
-        "Timothy Michael Sweeney": "President, CEO & Director",
-        "Vlad Yakov Barbalat": "Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director",
-        "Chad Stogel": "Spectrum Asset Management, Inc."
-    }
+        speaker_titles = {
+            "Christopher Locke Peirce": "Executive VP & CFO",
+            "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
+            "Neeti Bhalla Johnson": "Executive VP, President of Global Risk Solutions & Director",
+            "Robert Pietsch": "",
+            "Timothy Michael Sweeney": "President, CEO & Director",
+            "Vlad Yakov Barbalat": "Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director",
+            "Chad Stogel": "Spectrum Asset Management, Inc."
+        }
 
-    speakers = ["All"] + list(speaker_titles.keys())
-    selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers)
+        speakers = ["All"] + list(speaker_titles.keys())
+        selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers)
 
-    if selected_speaker != "All":
-        title = speaker_titles.get(selected_speaker, "")
-        if title:
-            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
+        if selected_speaker != "All":
+            title = speaker_titles.get(selected_speaker, "")
+            if title:
+                st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
 
-# Main UI
+# --- Main App ---
+uploaded_file = st.session_state.get("uploaded_file")
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -64,7 +71,7 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Filter transcript by speaker name based on formatting style in transcript
+    # Filter transcript by speaker
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
@@ -91,7 +98,7 @@ if uploaded_file:
             embeddings = OpenAIEmbeddings()
             vectorstore = FAISS.from_documents(chunks, embeddings)
 
-            # Summary generation
+            # LLM for summary
             llm = ChatOpenAI(temperature=0)
             summary_prompt = (
                 "Summarize the earnings call into four main sections:\n"

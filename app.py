@@ -14,7 +14,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# ✅ Set page layout
+# ✅ MUST BE FIRST: Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
 # ✅ Refined spacing
@@ -42,7 +42,7 @@ load_css()
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Initialize session
+# Initialize session state
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -52,7 +52,7 @@ if "chat_history" not in st.session_state:
 if "selected_benchmark" not in st.session_state:
     st.session_state.selected_benchmark = "VGT"
 
-# Speakers and Benchmark Dropdowns
+# Speaker + Benchmark lists
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
@@ -64,7 +64,6 @@ benchmark_stocks = ["VGT", "GOOGL", "APPL", "AMZN"]
 
 # --- Sidebar ---
 with st.sidebar:
-    # Speaker Analysis
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
         unsafe_allow_html=True
@@ -77,7 +76,6 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
-    # Benchmark Analysis
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-top:1rem; margin-bottom:0.25rem;'>Benchmark Analysis</div>",
         unsafe_allow_html=True
@@ -91,7 +89,6 @@ with st.sidebar:
     )
     st.session_state.selected_benchmark = selected_benchmark
 
-    # File upload
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -127,15 +124,11 @@ if uploaded_file:
         raw_text = "".join([page.get_text() for page in doc])
 
     if selected_speaker != "All":
-        speaker_name_for_matching = selected_speaker.split(" (")[0]
-
-        # Enhanced version of your logic to support both 'Name:' and 'NAME\n'
-        all_speaker_names = list(speaker_titles.keys())
-        boundary_pattern = "|".join(re.escape(name) for name in all_speaker_names if name != speaker_name_for_matching)
-
+        # 🟢 Using your original speaker summary logic
+        speaker_name_for_matching = selected_speaker.split(" (")[0] if selected_speaker != "All" else "All"
         pattern = re.compile(
-            rf"(?i){re.escape(speaker_name_for_matching)}[\s:]*\n(.*?)(?=\n(?:{boundary_pattern})[\s:]*\n|$)",
-            re.DOTALL
+            rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
+            re.DOTALL | re.IGNORECASE
         )
         matches = pattern.findall(raw_text)
         raw_text = "\n".join(matches).strip() if matches else ""

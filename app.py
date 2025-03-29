@@ -109,8 +109,9 @@ if uploaded_file:
     all_speakers = ["All"] + sorted(speaker_dict.keys())
 
     with st.sidebar:
-        st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
-        selected_speaker = st.selectbox("Speaker", all_speakers, index=0)
+        st.markdown("### **Call Participants**", unsafe_allow_html=True)
+        selected_speaker = st.selectbox("Call Participant", all_speakers, index=0)
+        st.sidebar.write("🔍 Speakers detected:", list(speaker_dict.keys()))
 
     if selected_speaker != "All":
         raw_text = speaker_dict.get(selected_speaker, "")

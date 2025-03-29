@@ -142,7 +142,7 @@ if uploaded_file:
         st.session_state.chat_input = ""  # Clear input
 
     # Input box with callback
-    st.text_input("Ask a question", key="chat_input", on_change=handle_question)
+    st.text_input("", key="chat_input", on_change=handle_question)
 
     # Display Q&A side-by-side (most recent first)
     qa_pairs = []

@@ -22,7 +22,7 @@ def load_css():
         pass
 
 # Page setup
-st.set_page_config(page_title="📊 Earnings Call Summarizer", layout="wide")
+st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 load_css()
 
 # OpenAI API key securely from Streamlit secrets
@@ -31,18 +31,18 @@ os.environ["OPENAI_API_KEY"] = openai_key
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### 📁 **Upload Earnings Call PDF**", unsafe_allow_html=True)
+    st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
-    st.markdown("### 📊 **Chunks to summarize**", unsafe_allow_html=True)
+    st.markdown("### **Chunks to summarize**", unsafe_allow_html=True)
     chunk_size = st.slider("Chunk size", 300, 1500, 1000, step=100)
 
-    st.markdown("### 🎤 **Filter Q&A by speaker**", unsafe_allow_html=True)
+    st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Speaker", ["All"])
 
 # Main
 st.image("vanguard_logo.png", width=180)
-st.markdown("## **📄 Earnings Call Summarizer**")
+st.markdown("## **Earnings Call Summarizer**")
 
 if uploaded_file:
     with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
@@ -50,11 +50,11 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    st.markdown("### 🔍 Transcript Preview")
+    st.markdown("###Transcript Preview")
     with st.expander("Show Raw Text"):
         st.text(raw_text[:3000] + "...")
 
-    st.markdown("### 🧠 Generating Summary...")
+    st.markdown("###Generating Summary...")
 
     # Text splitting
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
@@ -70,11 +70,11 @@ if uploaded_file:
         summary_prompt = "Summarize the earnings call including major highlights, risks, opportunities, and sentiment:"
         summary = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        st.markdown("### 📌 Summary")
+        st.markdown("###Summary")
         st.markdown(summary)
 
         # Ask a question
-        st.markdown("### 💬 Ask a Question")
+        st.markdown("###Ask a Question")
         question = st.text_input("Ask something about this call:")
         if question:
             qa_chain = RetrievalQA.from_chain_type(
@@ -86,4 +86,4 @@ if uploaded_file:
             st.success(answer)
 
     except Exception as e:
-        st.error(f"⚠️ Vectorstore creation failed: {e}")
+        st.error(f"Vectorstore creation failed: {e}")

@@ -26,7 +26,7 @@ st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 load_css()
 
 # OpenAI API key securely from Streamlit secrets
-openai_key = st.secrets.get("OPENAI_API_KEY")
+openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
 # Sidebar
@@ -40,7 +40,7 @@ with st.sidebar:
     st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Speaker", ["All"])
 
-# Main
+# Main UI
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -50,11 +50,11 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    st.markdown("### Transcript Preview")
-    with st.expander("Show Raw Text"):
-        st.text(raw_text[:3000] + "...")
-
-    st.markdown("### Generating Summary...")
+    # Optional: Speaker filtering
+    if selected_speaker != "All":
+        speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
+        matches = speaker_pattern.findall(raw_text)
+        raw_text = "\n".join(matches)
 
     # Text splitting
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
@@ -67,11 +67,26 @@ if uploaded_file:
 
         # LLM for summary
         llm = ChatOpenAI(temperature=0)
-        summary_prompt = "Summarize the earnings call including major highlights, risks, opportunities, and sentiment:"
-        summary = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
+        summary_prompt = (
+            "Summarize the earnings call into exactly four concise bullet points, covering:\n"
+            "- Key financial highlights\n"
+            "- Risks and concerns\n"
+            "- Opportunities or forward-looking statements\n"
+            "- General sentiment\n"
+            "Format each point as a separate bullet point."
+        )
+        response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        st.markdown("### Summary")
-        st.markdown(summary)
+        # Format the summary into bold black bullet points
+        styled_summary = ""
+        for bullet in response.split("\n"):
+            bullet = bullet.strip()
+            if bullet.startswith("-") or bullet.startswith("•") or bullet:
+                clean_bullet = re.sub(r"^[-•\d\.]*\s*", "", bullet)
+                styled_summary += f"<li><span style='color:black; font-weight:bold'>{clean_bullet}</span></li>"
+
+        st.markdown("### Summary", unsafe_allow_html=True)
+        st.markdown(f"<ul>{styled_summary}</ul>", unsafe_allow_html=True)
 
         # Ask a question
         st.markdown("### Ask a Question")

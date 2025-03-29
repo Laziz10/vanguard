@@ -88,27 +88,23 @@ if uploaded_file:
             and "risks and uncertainties" not in line.lower()
         ]
 
-        # Accept both numbered and unnumbered headers
         section_titles = [
-            "1. Key financial highlights",
             "Key financial highlights",
-            "2. Risks and concerns",
             "Risks and concerns",
-            "3. Opportunities or forward-looking statements",
             "Opportunities or forward-looking statements",
-            "4. General sentiment",
             "General sentiment"
         ]
 
         bullet_group = ""
 
         for line in lines:
-            normalized_line = line.lower().rstrip(":").strip()
-            if any(normalized_line.startswith(title.lower().rstrip(":")) for title in section_titles):
+            # Remove numbering and normalize for matching
+            normalized_line = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
+            if any(normalized_line.lower().startswith(title.lower()) for title in section_titles):
                 if bullet_group:
                     styled_summary += f"<ul>{bullet_group}</ul>"
                     bullet_group = ""
-                styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{line}</p>"
+                styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{normalized_line}:</p>"
             else:
                 clean_line = re.sub(r"^[-•\s]+", "", line)
                 bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
@@ -131,7 +127,7 @@ if uploaded_file:
     def clear_input():
         st.session_state.chat_input = ""
 
-    user_input = st.text_input("", key="chat_input", on_change=clear_input)
+    user_input = st.text_input("Ask a question", key="chat_input", on_change=clear_input)
 
     if user_input := st.session_state.get("chat_input", "").strip():
         st.session_state.chat_history.append({"role": "user", "content": user_input})

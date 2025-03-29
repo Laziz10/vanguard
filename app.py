@@ -50,11 +50,11 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    st.markdown("###Transcript Preview")
+    st.markdown("### Transcript Preview")
     with st.expander("Show Raw Text"):
         st.text(raw_text[:3000] + "...")
 
-    st.markdown("###Generating Summary...")
+    st.markdown("### Generating Summary...")
 
     # Text splitting
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
@@ -70,11 +70,11 @@ if uploaded_file:
         summary_prompt = "Summarize the earnings call including major highlights, risks, opportunities, and sentiment:"
         summary = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        st.markdown("###Summary")
+        st.markdown("### Summary")
         st.markdown(summary)
 
         # Ask a question
-        st.markdown("###Ask a Question")
+        st.markdown("### Ask a Question")
         question = st.text_input("Ask something about this call:")
         if question:
             qa_chain = RetrievalQA.from_chain_type(

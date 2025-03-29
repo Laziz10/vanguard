@@ -68,7 +68,7 @@ with st.sidebar:
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
         if uploaded is not None:
             st.session_state.uploaded_file = uploaded
-            st.experimental_rerun()
+            st.rerun()
 
 # Get persistent state values
 uploaded_file = st.session_state.uploaded_file

@@ -100,7 +100,7 @@ if uploaded_file:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    user_input = st.text_input("Ask a question", key="chat_input")
+    user_input = st.text_input("", key="chat_input")
 
     if user_input:
         st.session_state.chat_history.append({"role": "user", "content": user_input})

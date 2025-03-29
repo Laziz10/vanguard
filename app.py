@@ -34,32 +34,20 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
-    st.markdown("### <span style='color: white; font-weight: bold;'>Call Participants</span>", unsafe_allow_html=True)
+    st.markdown("### **Call Participants**", unsafe_allow_html=True)
 
-    executives = [
-        ("Christopher Locke Peirce", "Executive VP & CFO"),
-        ("Hamid Talal Mirza", "Executive VP, President of US Retail Markets & Director"),
-        ("Neeti Bhalla Johnson", "Executive VP, President of Global Risk Solutions & Director"),
-        ("Robert Pietsch", "Analyst"),
-        ("Timothy Michael Sweeney", "President, CEO & Director"),
-        ("Vlad Yakov Barbalat", "Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director")
+    speakers = [
+        "All",
+        "Christopher Locke Peirce",
+        "Hamid Talal Mirza",
+        "Neeti Bhalla Johnson",
+        "Robert Pietsch",
+        "Timothy Michael Sweeney",
+        "Vlad Yakov Barbalat",
+        "Chad Stogel"
     ]
 
-    analysts = [
-        ("Chad Stogel", "Spectrum Asset Management, Inc.")
-    ]
-
-    # Display executives
-    for name, title in executives:
-        st.markdown(f"<p style='color: white; font-weight: bold; margin-bottom: 0;'>{name}</p>", unsafe_allow_html=True)
-        if title:
-            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0;'>{title}</p>", unsafe_allow_html=True)
-
-    # Analysts section
-    st.markdown("<p style='color: lightgray; font-weight: bold; margin-top: 1rem;'>ANALYSTS</p>", unsafe_allow_html=True)
-    for name, company in analysts:
-        st.markdown(f"<p style='color: white; font-weight: bold; margin-bottom: 0;'>{name}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0;'>{company}</p>", unsafe_allow_html=True)
+    selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers)
 
 # Main UI
 st.image("vanguard_logo.png", width=180)
@@ -70,6 +58,16 @@ if uploaded_file:
         raw_text = ""
         for page in doc:
             raw_text += page.get_text()
+
+    # Filter by speaker if not "All"
+    if selected_speaker != "All":
+        speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
+        matches = speaker_pattern.findall(raw_text)
+        if matches:
+            raw_text = "\n".join(matches)
+        else:
+            st.warning(f"No speech found for {selected_speaker}. Displaying empty result.")
+            raw_text = ""
 
     # Set fixed chunk size
     chunk_size = 500
@@ -97,7 +95,6 @@ if uploaded_file:
         styled_summary = ""
         raw_lines = response.split("\n")
 
-        # Filter out empty lines and disclaimers
         lines = [
             line.strip() for line in raw_lines
             if line.strip()
@@ -162,7 +159,7 @@ if uploaded_file:
     # Input box with callback
     st.text_input("", key="chat_input", on_change=handle_question)
 
-    # Display Q&A side-by-side (most recent first)
+    # Display Q&A side-by-side
     qa_pairs = []
     temp = {}
 

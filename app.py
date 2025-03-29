@@ -250,4 +250,28 @@ def generate_pdf(pdf_filename):
     # Add Summary Text
     y_position = 730
     c.drawString(72, y_position, "Summary of Earnings Call:")
-    y_position
+    y_position -= 20
+    summary_text = st.session_state.chat_history  # Get the Summary content from the session
+    for line in summary_text:
+        if line["role"] == "ai":
+            c.drawString(72, y_position, f"Summary: {line['content']}")
+            y_position -= 20
+
+    # Add Q&A
+    c.drawString(72, y_position, "Q&A:")
+    y_position -= 20
+    for entry in st.session_state.chat_history:
+        if entry["role"] == "user":
+            c.drawString(72, y_position, f"Q: {entry['content']}")
+            y_position -= 20
+        elif entry["role"] == "ai":
+            c.drawString(72, y_position, f"A: {entry['content']}")
+            y_position -= 20
+
+    # Save the PDF
+    c.showPage()
+    c.save()
+
+    # Return the file to the user for download
+    pdf_file.seek(0)
+    st.download_button(label="Download PDF", data=pdf_file, file_name=pdf_filename, mime="application/pdf")

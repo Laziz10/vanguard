@@ -4,3 +4,4 @@ pymupdf
 textblob
 langchain
 faiss-cpu
+langchain-community

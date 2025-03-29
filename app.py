@@ -66,30 +66,43 @@ if uploaded_file:
         # LLM for summary
         llm = ChatOpenAI(temperature=0)
         summary_prompt = (
-            "Summarize the earnings call into exactly four concise bullet points, covering:\n"
-            "- Key financial highlights\n"
-            "- Risks and concerns\n"
-            "- Opportunities or forward-looking statements\n"
-            "- General sentiment\n"
-            "Format each point as a separate bullet point."
+            "Summarize the earnings call into four main sections:\n"
+            "1. Key financial highlights\n"
+            "2. Risks and concerns\n"
+            "3. Opportunities or forward-looking statements\n"
+            "4. General sentiment\n"
+            "Format each as a section title followed by 1–2 bullet points."
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format bullet points: bold before colon, regular after
+        # Format sectioned summary: headers as titles, details as bullets
         styled_summary = ""
-        for bullet in response.split("\n"):
-            bullet = bullet.strip()
-            if not bullet or bullet.lower().startswith("summary of"):
-                continue  # Skip generic or non-bullet lines
-            clean_bullet = re.sub(r"^[-•\d\.]*\s*", "", bullet)
-            if ":" in clean_bullet:
-                before_colon, after_colon = clean_bullet.split(":", 1)
-                styled_summary += f"<li><span style='color:black; font-weight:bold'>{before_colon}:</span><span style='color:black;'> {after_colon.strip()}</span></li>"
+        lines = [line.strip() for line in response.split("\n") if line.strip()]
+
+        section_titles = [
+            "Key financial highlights:",
+            "Risks and concerns:",
+            "Opportunities or forward-looking statements:",
+            "General sentiment:"
+        ]
+
+        current_section = ""
+        bullet_group = ""
+
+        for line in lines:
+            if any(line.startswith(title) for title in section_titles):
+                if bullet_group:
+                    styled_summary += f"<ul>{bullet_group}</ul>"
+                    bullet_group = ""
+                styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{line}</p>"
             else:
-                styled_summary += f"<li><span style='color:black;'>{clean_bullet}</span></li>"
+                bullet_group += f"<li><span style='color:black;'>{line}</span></li>"
+
+        if bullet_group:
+            styled_summary += f"<ul>{bullet_group}</ul>"
 
         st.markdown("### Summary", unsafe_allow_html=True)
-        st.markdown(f"<ul>{styled_summary}</ul>", unsafe_allow_html=True)
+        st.markdown(styled_summary, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
@@ -97,18 +110,14 @@ if uploaded_file:
     # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
-    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Clear input function
     def clear_input():
         st.session_state.chat_input = ""
 
-    # Text input with on_change to clear
-    user_input = st.text_input("", key="chat_input", on_change=clear_input)
+    user_input = st.text_input("Ask a question", key="chat_input", on_change=clear_input)
 
-    # Q&A processing
     if user_input := st.session_state.get("chat_input", "").strip():
         st.session_state.chat_history.append({"role": "user", "content": user_input})
 

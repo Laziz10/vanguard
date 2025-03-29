@@ -2,18 +2,28 @@ import numpy as np
 if not hasattr(np, 'int'): np.int = int
 if not hasattr(np, 'float'): np.float = float
 
-import os
 import streamlit as st
 import fitz  # PyMuPDF
 import re
-
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
+import numpy as np
+import openai
+from sentence_transformers import SentenceTransformer
+import faiss
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import RetrievalQA
+from fpdf import FPDF
+import os
+import time
 
-# Load CSS
+# ✅ Required by Streamlit
+st.set_page_config(page_title="Earnings Call Assistant", layout="wide")
+
+
+
+# OpenAI API key securely from Streamlit secrets
+openai_key = st.secrets.get("OPENAI_API_KEY")
+os.environ["OPENAI_API_KEY"] = openai_key
+
+# 🎨 Load Vanguard-style CSS
 def load_css():
     try:
         with open("style.css") as f:
@@ -21,70 +31,129 @@ def load_css():
     except:
         pass
 
-# Page setup
-st.set_page_config(page_title="📊 Earnings Call Summarizer", layout="wide")
 load_css()
 
-# OpenAI API key securely from Streamlit secrets
-openai_key = st.secrets.get("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = openai_key
-
-# Sidebar
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 📁 **Upload Earnings Call PDF**", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("", type=["pdf"])
+    uploaded_file = st.file_uploader("Upload Earnings Call PDF", type="pdf")
+    chunk_count = st.slider("Chunks to summarize", 1, 6, 4)
 
-    st.markdown("### 📊 **Chunks to summarize**", unsafe_allow_html=True)
-    chunk_size = st.slider("Chunk size", 300, 1500, 1000, step=100)
-
-    st.markdown("### 🎤 **Filter Q&A by speaker**", unsafe_allow_html=True)
-    selected_speaker = st.selectbox("Speaker", ["All"])
-
-# Main
+# --- MAIN CONTENT ---
 st.image("vanguard_logo.png", width=180)
-st.markdown("## **📄 Earnings Call Summarizer**")
+st.title("Earnings Call Summarizer")
 
 if uploaded_file:
     with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
-        raw_text = ""
-        for page in doc:
-            raw_text += page.get_text()
+        text = "".join([page.get_text() for page in doc])
+    text = re.sub(r"\n", " ", text)
+    text = re.sub(r"\s{2,}", " ", text)
 
-    st.markdown("### 🔍 Transcript Preview")
-    with st.expander("Show Raw Text"):
-        st.text(raw_text[:3000] + "...")
+    speaker_roles = {
+        "Timothy Michael Sweeney": "President, CEO & Director",
+        "Christopher Locke Peirce": "EVP & CFO",
+        "Neeti Bhalla Johnson": "EVP, President of Global Risk Solutions",
+        "Hamid Talal Mirza": "EVP, President of US Retail Markets",
+        "Vlad Yakov Barbalat": "CIO, President of Liberty Mutual Investments",
+        "Robert Pietsch": "Executive Director of IR"
+    }
 
-    st.markdown("### 🧠 Generating Summary...")
+    speaker_list = ["All"] + [f"{name} — {title}" for name, title in speaker_roles.items()]
+    selected_speaker_label = st.sidebar.selectbox("Filter Q&A by speaker", speaker_list)
+    selected_speaker = selected_speaker_label.split(" — ")[0] if " — " in selected_speaker_label else "All"
 
-    # Text splitting
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
-    chunks = splitter.create_documents([raw_text])
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    chunks = splitter.split_text(text)
 
-    try:
-        # Embedding
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(chunks, embeddings)
+    def summarize_text(text_block):
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": f"Summarize this excerpt:\n{text_block}"}],
+            temperature=0.5,
+            max_tokens=300
+        )
+        return response["choices"][0]["message"]["content"]
 
-        # LLM for summary
-        llm = ChatOpenAI(temperature=0)
-        summary_prompt = "Summarize the earnings call including major highlights, risks, opportunities, and sentiment:"
-        summary = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
+    st.subheader("Summary")
+    summary_bullets = []
+    with st.spinner("Summarizing..."):
+        for chunk in chunks[:chunk_count]:
+            summary_bullets.append(summarize_text(chunk))
 
-        st.markdown("### 📌 Summary")
-        st.markdown(summary)
+    st.markdown("<ul>" + "".join(f"<li>{s}</li>" for s in summary_bullets) + "</ul>", unsafe_allow_html=True)
 
-        # Ask a question
-        st.markdown("### 💬 Ask a Question")
-        question = st.text_input("Ask something about this call:")
-        if question:
-            qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                retriever=vectorstore.as_retriever(),
-                chain_type="stuff"
-            )
-            answer = qa_chain.run(question)
-            st.success(answer)
+    joined_summary = "\n".join(summary_bullets)
+    sentiment_prompt = f"Classify the overall sentiment of this earnings call summary as Positive, Negative, or Neutral:\n\n{joined_summary}"
+    sentiment_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": sentiment_prompt}],
+        temperature=0
+    )
+    sentiment = sentiment_response["choices"][0]["message"]["content"]
+    emoji = "🟢" if "Positive" in sentiment else "🔴" if "Negative" in sentiment else "🟡"
+    st.markdown(f"### Overall Sentiment: {emoji} **{sentiment.strip()}**")
 
-    except Exception as e:
-        st.error(f"⚠️ Vectorstore creation failed: {e}")
+    time.sleep(20)
 
+    def tag_speaker(chunk):
+        for name in speaker_roles:
+            if name in chunk:
+                return name
+        return "Unknown"
+
+    tagged_chunks = [{"text": chunk, "speaker": tag_speaker(chunk)} for chunk in chunks]
+    filtered_chunks = [c["text"] for c in tagged_chunks if selected_speaker == "All" or c["speaker"] == selected_speaker]
+
+    st.subheader("Ask a Question About the Call")
+    question = st.text_input("Your question", value=st.session_state.get("question", ""), label_visibility="visible")
+
+    if question:
+        embedder = SentenceTransformer("all-MiniLM-L6-v2")
+        doc_embeddings = embedder.encode(filtered_chunks)
+        q_embedding = embedder.encode([question])
+        index = faiss.IndexFlatL2(doc_embeddings.shape[1])
+        index.add(np.array(doc_embeddings))
+        D, I = index.search(np.array(q_embedding), k=3)
+        top_chunks = [filtered_chunks[i] for i in I[0]]
+        context = "\n\n".join(top_chunks)
+
+        prompt = f"Use the following excerpts from the transcript to answer:\n\n{context}\n\nQ: {question}\nA:"
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=400
+        )
+        answer = response["choices"][0]["message"]["content"]
+        st.markdown(f"**{answer}**")
+
+    # ✅ Suggested Questions now below Q&A
+    def suggest_questions(summary):
+        prompt = f"Suggest 3 insightful questions a financial analyst might ask based on this summary:\n\n{summary}"
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        return response["choices"][0]["message"]["content"]
+
+    st.markdown("### Suggested Questions")
+    for i, q in enumerate(suggest_questions(joined_summary).split("\n"), 1):
+        question_text = re.sub(r"^[\d\.\-\•\s]+", "", q).strip()
+        if question_text:
+            if st.button(f"Q{i}: {question_text}"):
+                st.session_state["question"] = question_text
+
+    def generate_pdf(lines):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.multi_cell(0, 10, "Earnings Call Summary\n")
+        for line in lines:
+            pdf.multi_cell(0, 10, f"- {line}")
+        pdf_path = "earnings_summary.pdf"
+        pdf.output(pdf_path)
+        return pdf_path
+
+    with st.sidebar:
+        with open(generate_pdf(summary_bullets), "rb") as f:
+            st.download_button("📥 Download Summary PDF", f.read(), file_name="earnings_summary.pdf")

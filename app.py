@@ -33,6 +33,8 @@ os.environ["OPENAI_API_KEY"] = openai_key
 with st.sidebar:
     if "uploaded_file" not in st.session_state:
         st.session_state.uploaded_file = None
+    if "selected_speaker" not in st.session_state:
+        st.session_state.selected_speaker = "All"
 
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
@@ -54,14 +56,18 @@ with st.sidebar:
 
         speakers = ["All"] + list(speaker_titles.keys())
         selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers)
+        st.session_state.selected_speaker = selected_speaker
 
         if selected_speaker != "All":
             title = speaker_titles.get(selected_speaker, "")
             if title:
                 st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
 
-# --- Main App ---
+# Get persistent values
 uploaded_file = st.session_state.get("uploaded_file")
+selected_speaker = st.session_state.get("selected_speaker", "All")
+
+# --- Main App ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 

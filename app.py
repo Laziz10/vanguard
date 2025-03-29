@@ -34,9 +34,6 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
-    st.markdown("### **Chunks to summarize**", unsafe_allow_html=True)
-    chunk_size = st.slider("Chunk size", 300, 1500, 1000, step=100)
-
     st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Speaker", ["All"])
 
@@ -56,7 +53,8 @@ if uploaded_file:
         matches = speaker_pattern.findall(raw_text)
         raw_text = "\n".join(matches)
 
-    # Text splitting
+    # Set fixed chunk size
+    chunk_size = 500
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = splitter.create_documents([raw_text])
 
@@ -77,13 +75,17 @@ if uploaded_file:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format the summary into bold black bullet points
+        # Format bullet points: bold before colon, regular after
         styled_summary = ""
         for bullet in response.split("\n"):
             bullet = bullet.strip()
             if bullet.startswith("-") or bullet.startswith("•") or bullet:
                 clean_bullet = re.sub(r"^[-•\d\.]*\s*", "", bullet)
-                styled_summary += f"<li><span style='color:black; font-weight:bold'>{clean_bullet}</span></li>"
+                if ":" in clean_bullet:
+                    before_colon, after_colon = clean_bullet.split(":", 1)
+                    styled_summary += f"<li><span style='color:black; font-weight:bold'>{before_colon}:</span>{after_colon}</li>"
+                else:
+                    styled_summary += f"<li><span style='color:black; font-weight:bold'>{clean_bullet}</span></li>"
 
         st.markdown("### Summary", unsafe_allow_html=True)
         st.markdown(f"<ul>{styled_summary}</ul>", unsafe_allow_html=True)
@@ -94,29 +96,23 @@ if uploaded_file:
     # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
-    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # User input
-    user_input = st.text_input("", key="chat_input")
+    user_input = st.text_input("Ask a question", key="chat_input")
 
     if user_input:
-        # Store user question
         st.session_state.chat_history.append({"role": "user", "content": user_input})
 
-        # Run QA
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             retriever=vectorstore.as_retriever(),
             chain_type="stuff"
         )
         answer = qa_chain.run(user_input)
-
-        # Store AI response
         st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-    # Display chat history (most recent first)
+    # Most recent first
     for entry in reversed(st.session_state.chat_history):
         if entry["role"] == "user":
             st.markdown(f"""

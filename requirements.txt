@@ -1,0 +1,6 @@
+streamlit
+openai
+pymupdf
+textblob
+langchain
+faiss-cpu

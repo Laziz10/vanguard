@@ -7,6 +7,8 @@ import re
 import streamlit as st
 import fitz  # PyMuPDF
 from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -80,14 +82,18 @@ with st.sidebar:
     st.session_state.selected_speaker = selected_speaker
 
     # Do not show the name of the speaker or title under the dropdown after selection
-    # Simply leave this section empty without additional information under the dropdown
-
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
         if uploaded is not None:
             st.session_state.uploaded_file = uploaded
             st.rerun()
+
+    # Add an option to download the summary and Q&A as a PDF
+    if st.session_state.uploaded_file and len(st.session_state.chat_history) > 0:
+        if st.button("Download Summary and Q&A as PDF"):
+            pdf_filename = "Earnings_Call_Summary_and_QA.pdf"
+            generate_pdf(pdf_filename)
 
 # Session values
 uploaded_file = st.session_state.uploaded_file
@@ -189,7 +195,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # --- Follow-Up Questions ---
+        # --- Follow-Up Questions --- 
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
@@ -209,25 +215,4 @@ if uploaded_file:
                             retriever=vectorstore.as_retriever(),
                             chain_type="stuff"
                         )
-                        answer = qa_chain.run(question)
-                        st.session_state.chat_history.append({"role": "ai", "content": answer})
-                        st.rerun()
-            except Exception as e:
-                st.warning(f"Could not generate follow-up questions: {e}")
-        else:
-            st.info("Transcript not available for generating follow-up questions.")
-
-# Q&A handler
-def handle_question(vectorstore, llm):
-    user_input = st.session_state.chat_input.strip()
-    if not user_input:
-        return
-    st.session_state.chat_history.append({"role": "user", "content": user_input})
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=vectorstore.as_retriever(),
-        chain_type="stuff"
-    )
-    answer = qa_chain.run(user_input)
-    st.session_state.chat_history.append({"role": "ai", "content": answer})
-    st.session_state.chat_input = ""
+                        answer = qa_chain

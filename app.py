@@ -97,12 +97,19 @@ if uploaded_file:
     # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
+    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    user_input = st.text_input("Ask a question", key="chat_input")
+    # Clear input function
+    def clear_input():
+        st.session_state.chat_input = ""
 
-    if user_input:
+    # Text input with on_change to clear
+    user_input = st.text_input("Ask a question", key="chat_input", on_change=clear_input)
+
+    # Q&A processing
+    if user_input := st.session_state.get("chat_input", "").strip():
         st.session_state.chat_history.append({"role": "user", "content": user_input})
 
         qa_chain = RetrievalQA.from_chain_type(
@@ -125,7 +132,7 @@ if uploaded_file:
             qa_pairs.append(temp)
             temp = {}
 
-    for pair in reversed(qa_pairs):  # Most recent first
+    for pair in reversed(qa_pairs):
         st.markdown(f"""
         <div style="display: flex; gap: 2rem; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
             <div style="flex: 1; color: black; font-weight: bold;">Q: {pair['question']}</div>

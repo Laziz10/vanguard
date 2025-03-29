@@ -14,22 +14,22 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# ✅ MUST BE FIRST: Set page layout
+# ✅ MUST BE FIRST
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# ✅ Refined inline CSS for speaker/Vanguard alignment
+# ✅ Refined spacing to align Speaker & Vanguard logo
 st.markdown("""
     <style>
     .block-container {
         padding-top: 1rem;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 0.25rem !important;
+        padding-top: 0.7rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Load optional custom CSS
+# Optional external CSS
 def load_css():
     try:
         with open("style.css") as f:
@@ -38,11 +38,11 @@ def load_css():
         pass
 load_css()
 
-# Load OpenAI key
+# Load API key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Session state setup
+# Initialize session
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -50,7 +50,7 @@ if "selected_speaker" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Define call participants
+# Speakers
 speaker_titles = {
     "Christopher Locke Peirce": "Executive VP & CFO",
     "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
@@ -62,9 +62,8 @@ speaker_titles = {
 }
 speakers = ["All"] + list(speaker_titles.keys())
 
-# --- Sidebar ---
+# Sidebar
 with st.sidebar:
-    # ✅ White, bold "Speaker Analysis" heading
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
         unsafe_allow_html=True
@@ -93,11 +92,11 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# Session variables
+# Session values
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
-# --- Main Area ---
+# Main area
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -106,7 +105,6 @@ if uploaded_file:
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])
 
-    # Optional speaker filter
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
@@ -174,7 +172,7 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
-        # --- Q&A ---
+        # Q&A
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
@@ -190,7 +188,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # --- Suggested Follow-Ups ---
+        # Follow-Up Questions
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (

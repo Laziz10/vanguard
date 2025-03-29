@@ -7,10 +7,6 @@ import re
 import streamlit as st
 import fitz  # PyMuPDF
 from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-import pandas as pd
-import matplotlib.pyplot as plt
 
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -20,6 +16,18 @@ from langchain.chains import RetrievalQA
 
 # ✅ MUST BE FIRST: Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
+
+# ✅ Refined spacing to align Speaker & Vanguard logo
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 1rem;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 0.3rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Optional external CSS
 def load_css():
@@ -53,8 +61,16 @@ speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_title
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("### Speaker Analysis")
+    st.markdown(
+        "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
+        unsafe_allow_html=True
+    )
 
+    # Ensure session state is initialized
+    if "selected_speaker" not in st.session_state:
+        st.session_state.selected_speaker = "All"
+
+    # Safe dropdown handling with a fallback if index is out of range
     selected_speaker = st.selectbox(
         label="Speaker Dropdown",
         options=speakers,
@@ -63,20 +79,17 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
+    # Do not show the name of the speaker or title under the dropdown after selection
+    # Simply leave this section empty without additional information under the dropdown
+
     if st.session_state.uploaded_file is None:
-        st.markdown("### **Upload Earnings Call PDF**")
+        st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
         if uploaded is not None:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-    if st.session_state.uploaded_file and len(st.session_state.chat_history) > 0:
-        if st.button("Download Summary and Q&A as PDF"):
-            generate_pdf("Earnings_Call_Summary_and_QA.pdf")
-
-    st.markdown("---")
-    show_benchmark = st.checkbox("## Benchmark Analysis")
-
+# Session values
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
@@ -90,10 +103,13 @@ if uploaded_file:
         raw_text = "".join([page.get_text() for page in doc])
 
     if selected_speaker != "All":
-        speaker_name_for_matching = selected_speaker.split(" (")[0]
+        # Extracting name without title for matching
+        speaker_name_for_matching = selected_speaker.split(" (")[0] if selected_speaker != "All" else "All"
+
+        # Updated regex for case-insensitive matching and handling the colon after the name
         pattern = re.compile(
             rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
-            re.DOTALL | re.IGNORECASE
+            re.DOTALL | re.IGNORECASE  # Case-insensitive matching
         )
         matches = pattern.findall(raw_text)
         raw_text = "\n".join(matches).strip() if matches else ""
@@ -198,6 +214,8 @@ if uploaded_file:
                         st.rerun()
             except Exception as e:
                 st.warning(f"Could not generate follow-up questions: {e}")
+        else:
+            st.info("Transcript not available for generating follow-up questions.")
 
 # Q&A handler
 def handle_question(vectorstore, llm):
@@ -213,68 +231,3 @@ def handle_question(vectorstore, llm):
     answer = qa_chain.run(user_input)
     st.session_state.chat_history.append({"role": "ai", "content": answer})
     st.session_state.chat_input = ""
-
-# --- PDF Export ---
-def generate_pdf(pdf_filename):
-    pdf_file = BytesIO()
-    c = canvas.Canvas(pdf_file, pagesize=letter)
-    c.setFont("Helvetica", 10)
-    y_position = 750
-    c.drawString(72, y_position, "Earnings Call Summary and Q&A")
-    y_position -= 20
-    for entry in st.session_state.chat_history:
-        if y_position < 72:
-            c.showPage()
-            c.setFont("Helvetica", 10)
-            y_position = 750
-        prefix = "Q: " if entry["role"] == "user" else "A: "
-        c.drawString(72, y_position, f"{prefix}{entry['content']}")
-        y_position -= 20
-    c.save()
-    pdf_file.seek(0)
-    st.download_button("Download PDF", data=pdf_file, file_name=pdf_filename, mime="application/pdf")
-
-# --- Benchmark Analysis Section ---
-def get_10yr_annual_return_comparison():
-    years = list(range(2014, 2024))
-    msft = [24.16, 19.44, 12.00, 37.66, 18.74, 55.26, 41.04, 51.21, -28.69, 56.80]
-    goog = [13.89, 44.56, -1.84, 35.58, -0.80, 28.18, 30.85, 65.17, -38.68, 47.38]
-    aapl = [40.00, -4.64, 10.03, 48.24, -5.39, 88.96, 82.31, 34.65, -26.40, 48.00]
-    vgt  = [18.53, 4.50, 15.89, 36.20, 1.99, 51.60, 44.74, 29.87, -29.78, 51.26]
-    return pd.DataFrame({
-        "Year": years,
-        "MSFT (%)": msft,
-        "GOOG (%)": goog,
-        "AAPL (%)": aapl,
-        "VGT (%)": vgt
-    })
-
-def plot_10yr_stock_returns(df):
-    plt.figure(figsize=(10, 6))
-    for col in df.columns[1:]:
-        plt.plot(df["Year"], df[col], marker='o', label=col)
-    plt.title("10-Year Annual Return Comparison (2014–2023)")
-    plt.xlabel("Year")
-    plt.ylabel("Return (%)")
-    plt.axhline(0, linestyle='--', color='gray')
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    st.pyplot(plt)
-
-def generate_return_insights():
-    return [
-        "VGT closely mirrors the average performance of its top holdings like MSFT and AAPL.",
-        "Microsoft delivered the most consistent returns, finishing strong in 2023 with +56.80%.",
-        "Apple had explosive gains in 2019 (+88.96%) and 2020 (+82.31%) but dipped in 2022.",
-        "All four assets saw significant drops in 2022, reflecting broader tech market weakness."
-    ]
-
-if show_benchmark:
-    st.markdown("## 10-Year Benchmark Analysis")
-    df_returns = get_10yr_annual_return_comparison()
-    st.dataframe(df_returns, use_container_width=True)
-    plot_10yr_stock_returns(df_returns)
-    st.markdown("### Insights")
-    for insight in generate_return_insights():
-        st.markdown(f"- {insight}")

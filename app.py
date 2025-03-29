@@ -100,7 +100,7 @@ if uploaded_file:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    user_input = st.text_input("", key="chat_input")
+    user_input = st.text_input("Ask a question", key="chat_input")
 
     if user_input:
         st.session_state.chat_history.append({"role": "user", "content": user_input})
@@ -113,17 +113,22 @@ if uploaded_file:
         answer = qa_chain.run(user_input)
         st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-    # Display chat history (most recent first)
-    for entry in reversed(st.session_state.chat_history):
+    # Display Q&A side-by-side (most recent first)
+    qa_pairs = []
+    temp = {}
+
+    for entry in st.session_state.chat_history:
         if entry["role"] == "user":
-            st.markdown(f"""
-            <div style="background-color: #d32f2f; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
-                <b>{entry['content']}</b>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div style="background-color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                <span style="color: black; font-weight: bold;">{entry['content']}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            temp["question"] = entry["content"]
+        elif entry["role"] == "ai" and "question" in temp:
+            temp["answer"] = entry["content"]
+            qa_pairs.append(temp)
+            temp = {}
+
+    for pair in reversed(qa_pairs):  # Most recent first
+        st.markdown(f"""
+        <div style="display: flex; gap: 2rem; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div style="flex: 1; color: black; font-weight: bold;">Q: {pair['question']}</div>
+            <div style="flex: 2; color: black; font-weight: bold;">A: {pair['answer']}</div>
+        </div>
+        """, unsafe_allow_html=True)

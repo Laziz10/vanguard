@@ -79,15 +79,13 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
+    # Display name without the title
     if selected_speaker != "All":
-        # Extracting speaker's name from format "Name (Position)"
         speaker_name = selected_speaker.split(" (")[0]  # Extract the name without the position
         title = speaker_titles.get(speaker_name, "")
         if title:
-            st.markdown(
-                f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>",
-                unsafe_allow_html=True
-            )
+            # Only display title once, not after selection
+            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
 
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
@@ -110,9 +108,12 @@ if uploaded_file:
         raw_text = "".join([page.get_text() for page in doc])
 
     if selected_speaker != "All":
+        # Extracting name without title for matching
+        speaker_name_for_matching = selected_speaker.split(" (")[0] if selected_speaker != "All" else "All"
+
         # Updated regex for case-insensitive matching and handling the colon after the name
         pattern = re.compile(
-            rf"{re.escape(selected_speaker)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
+            rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
             re.DOTALL | re.IGNORECASE  # Case-insensitive matching
         )
         matches = pattern.findall(raw_text)

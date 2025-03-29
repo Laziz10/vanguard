@@ -106,7 +106,7 @@ if uploaded_file:
         st.session_state.chat_input = ""
 
     # Text input with on_change to clear
-    user_input = st.text_input("Ask a question", key="chat_input", on_change=clear_input)
+    user_input = st.text_input("", key="chat_input", on_change=clear_input)
 
     # Q&A processing
     if user_input := st.session_state.get("chat_input", "").strip():

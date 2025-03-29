@@ -44,17 +44,22 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Extract speaker segments with name and title (support – or - as dash)
+    # Try to extract speaker segments with name and title
     speaker_blocks = re.findall(
         r"(?<=\n)([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z\s]+):([\s\S]*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z\s]+:|\Z)",
         raw_text
     )
 
     speaker_dict = {}
-    for name_title, speech in speaker_blocks:
-        key = name_title.strip()
-        speaker_dict.setdefault(key, "")
-        speaker_dict[key] += speech.strip() + "\n"
+
+    if speaker_blocks:
+        for name_title, speech in speaker_blocks:
+            key = name_title.strip()
+            speaker_dict.setdefault(key, "")
+            speaker_dict[key] += speech.strip() + "\n"
+    else:
+        # Fallback: assign all text to a generic speaker
+        speaker_dict = {"Unknown Speaker": raw_text}
 
     all_speakers = ["All"] + sorted(speaker_dict.keys())
 
@@ -67,17 +72,22 @@ if uploaded_file:
     else:
         raw_text = "\n".join(speaker_dict.values())
 
-    # Set fixed chunk size
+    if not raw_text.strip():
+        st.warning("No valid transcript text found.")
+        st.stop()
+
     chunk_size = 500
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = splitter.create_documents([raw_text])
 
+    if not chunks:
+        st.warning("No valid chunks could be created from the transcript.")
+        st.stop()
+
     try:
-        # Embedding
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_documents(chunks, embeddings)
 
-        # LLM for summary
         llm = ChatOpenAI(temperature=0)
         summary_prompt = (
             "Summarize the earnings call into four main sections:\n"
@@ -89,7 +99,6 @@ if uploaded_file:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format sectioned summary
         styled_summary = ""
         raw_lines = response.split("\n")
 
@@ -130,7 +139,6 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
 
-    # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
     if "chat_history" not in st.session_state:

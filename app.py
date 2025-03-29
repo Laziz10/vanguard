@@ -52,9 +52,9 @@ speakers = ["All"] + list(speaker_titles.keys())
 
 # Sidebar
 with st.sidebar:
-    # Speaker dropdown is always shown
-    st.markdown("### **Call Participants**", unsafe_allow_html=True)
-    selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers, index=speakers.index(st.session_state.selected_speaker))
+    # Speaker Analysis section always shown
+    st.markdown("### <span style='color:white; font-weight:bold;'>Speaker Analysis</span>", unsafe_allow_html=True)
+    selected_speaker = st.selectbox("", options=speakers, index=speakers.index(st.session_state.selected_speaker))
     st.session_state.selected_speaker = selected_speaker
 
     if selected_speaker != "All":
@@ -62,7 +62,7 @@ with st.sidebar:
         if title:
             st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
 
-    # File uploader appears only if not uploaded
+    # Upload field (hidden after PDF upload)
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -70,7 +70,7 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# Get persistent state values
+# Get values from session
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
@@ -85,7 +85,7 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Filter by speaker
+    # Speaker filtering
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",

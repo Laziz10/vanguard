@@ -79,13 +79,13 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
-    # Display name without the title
+    # Display both name and title in the dropdown (e.g., Brett Iversen (CVP))
     if selected_speaker != "All":
+        st.markdown(f"<p style='color: white; font-size: 14px; font-weight: bold;'>{selected_speaker}</p>", unsafe_allow_html=True)
+
+        # Only display the name (without the title) after selection
         speaker_name = selected_speaker.split(" (")[0]  # Extract the name without the position
-        title = speaker_titles.get(speaker_name, "")
-        if title:
-            # Only display title once, not after selection
-            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: white; font-size: 12px; margin-top: 0.25rem;'> {speaker_name}</p>", unsafe_allow_html=True)
 
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)

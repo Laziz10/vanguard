@@ -5,7 +5,7 @@ if not hasattr(np, 'float'): np.float = float
 import os
 import re
 import streamlit as st
-import fitz
+import fitz  # PyMuPDF
 from io import BytesIO
 
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -14,7 +14,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# Custom CSS for layout fixes
+# 🚨 MUST BE FIRST Streamlit command
+st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
+
+# Custom inline CSS for layout
 st.markdown("""
     <style>
     .block-container {
@@ -26,10 +29,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Set page layout
-st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
-
-# Load CSS from file (optional)
+# Load optional CSS from file
 def load_css():
     try:
         with open("style.css") as f:
@@ -38,11 +38,11 @@ def load_css():
         pass
 load_css()
 
-# OpenAI Key
+# OpenAI API key setup
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Session defaults
+# Session state defaults
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -50,7 +50,7 @@ if "selected_speaker" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Speaker list
+# Speakers
 speaker_titles = {
     "Christopher Locke Peirce": "Executive VP & CFO",
     "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
@@ -64,10 +64,12 @@ speakers = ["All"] + list(speaker_titles.keys())
 
 # Sidebar
 with st.sidebar:
+    # Speaker dropdown title (white bold)
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
         unsafe_allow_html=True
     )
+
     selected_speaker = st.selectbox(
         label="Speaker Dropdown",
         options=speakers,
@@ -76,6 +78,7 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
+    # Speaker title
     if selected_speaker != "All":
         title = speaker_titles.get(selected_speaker, "")
         if title:
@@ -84,6 +87,7 @@ with st.sidebar:
                 unsafe_allow_html=True
             )
 
+    # File uploader
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -91,21 +95,20 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# Load session values
+# Load session vars
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
-# Main area
+# Main App Content
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
 if uploaded_file:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-        raw_text = ""
-        for page in doc:
-            raw_text += page.get_text()
+        raw_text = "".join([page.get_text() for page in doc])
 
+    # Speaker filtering
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
@@ -175,9 +178,11 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
+        # Ask a Question
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
+        # Display past Q&A
         for pair in reversed([
             {"question": q["content"], "answer": a["content"]}
             for q, a in zip(st.session_state.chat_history[::2], st.session_state.chat_history[1::2])
@@ -190,6 +195,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
+        # Suggested follow-up questions
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
@@ -217,7 +223,7 @@ if uploaded_file:
         else:
             st.info("Transcript not available for generating follow-up questions.")
 
-# Q&A handler
+# Q&A Handler
 def handle_question(vectorstore, llm):
     user_input = st.session_state.chat_input.strip()
     if not user_input:

@@ -99,7 +99,7 @@ if uploaded_file:
         st.session_state.chat_history = []
 
     # User input
-    user_input = st.text_input("Ask a question", key="chat_input")
+    user_input = st.text_input("", key="chat_input")
 
     if user_input:
         # Store user question
@@ -116,8 +116,8 @@ if uploaded_file:
         # Store AI response
         st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-    # Display chat history
-    for entry in st.session_state.chat_history:
+    # Display chat history (most recent first)
+    for entry in reversed(st.session_state.chat_history):
         if entry["role"] == "user":
             st.markdown(f"""
             <div style="background-color: #d32f2f; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">

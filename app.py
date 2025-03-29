@@ -34,8 +34,32 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
-    st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
-    selected_speaker = st.selectbox("Speaker", ["All"])
+    st.markdown("### <span style='color: white; font-weight: bold;'>Call Participants</span>", unsafe_allow_html=True)
+
+    executives = [
+        ("Christopher Locke Peirce", "Executive VP & CFO"),
+        ("Hamid Talal Mirza", "Executive VP, President of US Retail Markets & Director"),
+        ("Neeti Bhalla Johnson", "Executive VP, President of Global Risk Solutions & Director"),
+        ("Robert Pietsch", "Analyst"),
+        ("Timothy Michael Sweeney", "President, CEO & Director"),
+        ("Vlad Yakov Barbalat", "Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director")
+    ]
+
+    analysts = [
+        ("Chad Stogel", "Spectrum Asset Management, Inc.")
+    ]
+
+    # Display executives
+    for name, title in executives:
+        st.markdown(f"<p style='color: white; font-weight: bold; margin-bottom: 0;'>{name}</p>", unsafe_allow_html=True)
+        if title:
+            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0;'>{title}</p>", unsafe_allow_html=True)
+
+    # Analysts section
+    st.markdown("<p style='color: lightgray; font-weight: bold; margin-top: 1rem;'>ANALYSTS</p>", unsafe_allow_html=True)
+    for name, company in analysts:
+        st.markdown(f"<p style='color: white; font-weight: bold; margin-bottom: 0;'>{name}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0;'>{company}</p>", unsafe_allow_html=True)
 
 # Main UI
 st.image("vanguard_logo.png", width=180)
@@ -46,12 +70,6 @@ if uploaded_file:
         raw_text = ""
         for page in doc:
             raw_text += page.get_text()
-
-    # Optional: Speaker filtering
-    if selected_speaker != "All":
-        speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
-        matches = speaker_pattern.findall(raw_text)
-        raw_text = "\n".join(matches)
 
     # Set fixed chunk size
     chunk_size = 500

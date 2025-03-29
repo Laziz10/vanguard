@@ -88,17 +88,23 @@ if uploaded_file:
             and "risks and uncertainties" not in line.lower()
         ]
 
+        # Accept both numbered and unnumbered headers
         section_titles = [
-            "Key financial highlights:",
-            "Risks and concerns:",
-            "Opportunities or forward-looking statements:",
-            "General sentiment:"
+            "1. Key financial highlights",
+            "Key financial highlights",
+            "2. Risks and concerns",
+            "Risks and concerns",
+            "3. Opportunities or forward-looking statements",
+            "Opportunities or forward-looking statements",
+            "4. General sentiment",
+            "General sentiment"
         ]
 
         bullet_group = ""
 
         for line in lines:
-            if any(line.startswith(title) for title in section_titles):
+            normalized_line = line.lower().rstrip(":").strip()
+            if any(normalized_line.startswith(title.lower().rstrip(":")) for title in section_titles):
                 if bullet_group:
                     styled_summary += f"<ul>{bullet_group}</ul>"
                     bullet_group = ""

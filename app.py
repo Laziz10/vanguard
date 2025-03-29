@@ -91,21 +91,42 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
 
-    # Ask a question section (moved outside try block)
+    # Chat-style Q&A section
     st.markdown("### Ask a Question")
-    question = st.text_input("")
-    if question:
+
+    # Initialize chat history
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    # User input
+    user_input = st.text_input("Ask a question", key="chat_input")
+
+    if user_input:
+        # Store user question
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+
+        # Run QA
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             retriever=vectorstore.as_retriever(),
             chain_type="stuff"
         )
-        answer = qa_chain.run(question)
+        answer = qa_chain.run(user_input)
 
-        # Styled answer box
-        styled_answer = f"""
-        <div style="background-color: white; padding: 1rem; border-radius: 8px;">
-            <span style="color: black; font-weight: bold;">{answer}</span>
-        </div>
-        """
-        st.markdown(styled_answer, unsafe_allow_html=True)
+        # Store AI response
+        st.session_state.chat_history.append({"role": "ai", "content": answer})
+
+    # Display chat history
+    for entry in st.session_state.chat_history:
+        if entry["role"] == "user":
+            st.markdown(f"""
+            <div style="background-color: #d32f2f; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                <b>{entry['content']}</b>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background-color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="color: black; font-weight: bold;">{entry['content']}</span>
+            </div>
+            """, unsafe_allow_html=True)

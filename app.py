@@ -235,4 +235,39 @@ def handle_question(vectorstore, llm):
         chain_type="stuff"
     )
     answer = qa_chain.run(user_input)
-    st.session_state.chat_history.append({"role": "
+    st.session_state.chat_history.append({"role": "ai", "content": answer})
+    st.session_state.chat_input = ""
+
+# Function to generate and download PDF
+def generate_pdf(pdf_filename):
+    pdf_file = BytesIO()
+    c = canvas.Canvas(pdf_file, pagesize=letter)
+    c.setFont("Helvetica", 10)
+
+    # Add Title
+    c.drawString(72, 750, "Earnings Call Summary and Q&A")
+
+    # Add Summary Text
+    y_position = 730
+    c.drawString(72, y_position, "Summary of Earnings Call:")
+    y_position -= 20
+
+    # Add the actual summary content
+    summary_content = st.session_state.chat_history  # Use this for your summary content
+    for entry in summary_content:
+        if entry["role"] == "ai":
+            c.drawString(72, y_position, f"Q: {entry['content']}")
+            y_position -= 20
+        if entry["role"] == "user":
+            c.drawString(72, y_position, f"A: {entry['content']}")
+            y_position -= 20
+
+    c.save()
+
+    pdf_file.seek(0)
+    st.download_button(
+        label="Download PDF",
+        data=pdf_file,
+        file_name=pdf_filename,
+        mime="application/pdf"
+    )

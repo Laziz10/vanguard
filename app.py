@@ -25,17 +25,22 @@ def load_css():
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 load_css()
 
-# OpenAI API key securely from Streamlit secrets
+# OpenAI API key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
 # Sidebar
 with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("", type=["pdf"])
 
-    if uploaded_file:
-        st.success("✅ File uploaded successfully")  # Show success without displaying filename
+    if "file_uploaded" not in st.session_state:
+        uploaded_file = st.file_uploader("", type=["pdf"])
+        if uploaded_file:
+            st.session_state["file_uploaded"] = uploaded_file
+            st.rerun()
+    else:
+        uploaded_file = st.session_state["file_uploaded"]
+        st.success("✅ File uploaded successfully")
 
     st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Speaker", ["All"])
@@ -44,7 +49,8 @@ with st.sidebar:
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
-if uploaded_file:
+if "file_uploaded" in st.session_state:
+    uploaded_file = st.session_state["file_uploaded"]
     with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
         raw_text = ""
         for page in doc:

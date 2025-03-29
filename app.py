@@ -152,7 +152,7 @@ if selected_benchmark:
         "<style>"
         "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
         "th, td { padding: 8px 12px; text-align: center; font-weight: bold; border: 1px solid #ddd; }"
-        "th { background-color: #f0f0f0; }"
+        "th { background-color: #f0f0f0; text-align: center; }"
         "</style>"
         + df_formatted.to_html(index=False, escape=False)
     )

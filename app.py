@@ -49,6 +49,31 @@ def relabel_speakers(text, speaker_map):
             new_lines.append(line)
     return "\n".join(new_lines)
 
+# Extract speaker mapping from "Call Participants" section
+def extract_participant_mapping(text):
+    match = re.search(r"Call Participants(.*?)(?=\n\n|\n\s*Q\s*&\s*A|\n\s*Operator:)", text, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return {}
+
+    block = match.group(1)
+    lines = [line.strip() for line in block.strip().split("\n") if line.strip()]
+
+    speaker_map = {}
+    i = 0
+    while i < len(lines) - 1:
+        name_line = lines[i]
+        title_line = lines[i + 1]
+
+        if any(char.isalpha() for char in name_line) and any(char.isalpha() for char in title_line):
+            last_name = name_line.strip().split()[-1]
+            full_label = f"{name_line} – {title_line}"
+            speaker_map[last_name] = full_label
+            i += 2
+        else:
+            i += 1
+
+    return speaker_map
+
 # Main UI
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
@@ -59,15 +84,8 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Static speaker map (ideally extracted programmatically from "Call Participants")
-    participant_map = {
-        "Peirce": "Christopher Locke Peirce – Executive VP & CFO",
-        "Mirza": "Hamid Talal Mirza – Executive VP, President of US Retail Markets & Director",
-        "Johnson": "Neeti Bhalla Johnson – Executive VP, President of Global Risk Solutions & Director",
-        "Sweeney": "Timothy Michael Sweeney – President, CEO & Director",
-        "Barbalat": "Vlad Yakov Barbalat – Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director",
-        "Stogel": "Chad Stogel – Spectrum Asset Management, Inc."
-    }
+    # Automatically extract speaker mapping from Call Participants section
+    participant_map = extract_participant_mapping(raw_text)
 
     # Relabel transcript speaker lines using map
     raw_text = relabel_speakers(raw_text, participant_map)

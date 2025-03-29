@@ -104,9 +104,10 @@ if uploaded_file:
         raw_text = "".join([page.get_text() for page in doc])
 
     if selected_speaker != "All":
+        # Updated regex for case-insensitive matching and handling the colon after the name
         pattern = re.compile(
-            rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
-            re.DOTALL
+            rf"{re.escape(selected_speaker)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
+            re.DOTALL | re.IGNORECASE  # Case-insensitive matching
         )
         matches = pattern.findall(raw_text)
         raw_text = "\n".join(matches).strip() if matches else ""

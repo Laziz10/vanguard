@@ -88,17 +88,24 @@ if uploaded_file:
         st.markdown("### Summary", unsafe_allow_html=True)
         st.markdown(f"<ul>{styled_summary}</ul>", unsafe_allow_html=True)
 
-        # Ask a question
-        st.markdown("### Ask a Question")
-        question = st.text_input("")
-        if question:
-            qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                retriever=vectorstore.as_retriever(),
-                chain_type="stuff"
-            )
-            answer = qa_chain.run(question)
-            st.success(answer)
+# Ask a question section
+st.markdown("### Ask a Question")
+question = st.text_input("")
+if question:
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        chain_type="stuff"
+    )
+    answer = qa_chain.run(question)
+
+    # Styled answer output
+    styled_answer = f"""
+    <div style="background-color: white; padding: 1rem; border-radius: 8px;">
+        <span style="color: black; font-weight: bold;">{answer}</span>
+    </div>
+    """
+    st.markdown(styled_answer, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")

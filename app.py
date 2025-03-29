@@ -83,9 +83,9 @@ if uploaded_file:
                 clean_bullet = re.sub(r"^[-•\d\.]*\s*", "", bullet)
                 if ":" in clean_bullet:
                     before_colon, after_colon = clean_bullet.split(":", 1)
-                    styled_summary += f"<li><span style='color:black; font-weight:bold'>{before_colon}:</span>{after_colon}</li>"
+                    styled_summary += f"<li><span style='color:black; font-weight:bold'>{before_colon}:</span><span style='color:black;'> {after_colon.strip()}</span></li>"
                 else:
-                    styled_summary += f"<li><span style='color:black; font-weight:bold'>{clean_bullet}</span></li>"
+                    styled_summary += f"<li><span style='color:black;'>{clean_bullet}</span></li>"
 
         st.markdown("### Summary", unsafe_allow_html=True)
         st.markdown(f"<ul>{styled_summary}</ul>", unsafe_allow_html=True)
@@ -96,23 +96,29 @@ if uploaded_file:
     # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
+    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
+    # User input
     user_input = st.text_input("Ask a question", key="chat_input")
 
     if user_input:
+        # Store user question
         st.session_state.chat_history.append({"role": "user", "content": user_input})
 
+        # Run QA
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             retriever=vectorstore.as_retriever(),
             chain_type="stuff"
         )
         answer = qa_chain.run(user_input)
+
+        # Store AI response
         st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-    # Most recent first
+    # Display chat history (most recent first)
     for entry in reversed(st.session_state.chat_history):
         if entry["role"] == "user":
             st.markdown(f"""

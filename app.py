@@ -14,22 +14,22 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# 🚨 MUST BE FIRST Streamlit command
+# ✅ MUST BE FIRST: Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# Custom inline CSS for layout
+# ✅ Refined inline CSS for speaker/Vanguard alignment
 st.markdown("""
     <style>
     .block-container {
         padding-top: 1rem;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 1.5rem;
+        padding-top: 0.25rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Load optional CSS from file
+# Load optional custom CSS
 def load_css():
     try:
         with open("style.css") as f:
@@ -38,11 +38,11 @@ def load_css():
         pass
 load_css()
 
-# OpenAI API key setup
+# Load OpenAI key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Session state defaults
+# Session state setup
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -50,7 +50,7 @@ if "selected_speaker" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Speakers
+# Define call participants
 speaker_titles = {
     "Christopher Locke Peirce": "Executive VP & CFO",
     "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
@@ -62,9 +62,9 @@ speaker_titles = {
 }
 speakers = ["All"] + list(speaker_titles.keys())
 
-# Sidebar
+# --- Sidebar ---
 with st.sidebar:
-    # Speaker dropdown title (white bold)
+    # ✅ White, bold "Speaker Analysis" heading
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
         unsafe_allow_html=True
@@ -78,7 +78,6 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
-    # Speaker title
     if selected_speaker != "All":
         title = speaker_titles.get(selected_speaker, "")
         if title:
@@ -87,7 +86,6 @@ with st.sidebar:
                 unsafe_allow_html=True
             )
 
-    # File uploader
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -95,11 +93,11 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# Load session vars
+# Session variables
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
-# Main App Content
+# --- Main Area ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -108,18 +106,16 @@ if uploaded_file:
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])
 
-    # Speaker filtering
+    # Optional speaker filter
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
             re.DOTALL
         )
         matches = pattern.findall(raw_text)
-        if matches:
-            raw_text = "\n".join(matches).strip()
-        else:
+        raw_text = "\n".join(matches).strip() if matches else ""
+        if not matches:
             st.warning(f"No speech found for {selected_speaker}. Displaying empty result.")
-            raw_text = ""
 
     if not raw_text.strip():
         st.warning("No transcript text available for summarization.")
@@ -178,11 +174,10 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
-        # Ask a Question
+        # --- Q&A ---
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
-        # Display past Q&A
         for pair in reversed([
             {"question": q["content"], "answer": a["content"]}
             for q, a in zip(st.session_state.chat_history[::2], st.session_state.chat_history[1::2])
@@ -195,7 +190,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # Suggested follow-up questions
+        # --- Suggested Follow-Ups ---
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
@@ -223,7 +218,7 @@ if uploaded_file:
         else:
             st.info("Transcript not available for generating follow-up questions.")
 
-# Q&A Handler
+# Q&A handler
 def handle_question(vectorstore, llm):
     user_input = st.session_state.chat_input.strip()
     if not user_input:

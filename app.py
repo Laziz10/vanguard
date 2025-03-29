@@ -34,6 +34,21 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
+# Normalize and tag speakers using last name lookup
+def relabel_speakers(text, speaker_map):
+    lines = text.split("\n")
+    new_lines = []
+    for line in lines:
+        match = re.match(r"^([A-Z][a-z]+(?: [A-Z][a-z]+)?)\s*:", line)
+        if match:
+            name = match.group(1).split()[-1]  # get last name
+            full_label = speaker_map.get(name, name)
+            new_line = line.replace(match.group(0), f"{full_label}:")
+            new_lines.append(new_line)
+        else:
+            new_lines.append(line)
+    return "\n".join(new_lines)
+
 # Main UI
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
@@ -44,9 +59,22 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
+    # Static speaker map (ideally extracted programmatically from "Call Participants")
+    participant_map = {
+        "Peirce": "Christopher Locke Peirce – Executive VP & CFO",
+        "Mirza": "Hamid Talal Mirza – Executive VP, President of US Retail Markets & Director",
+        "Johnson": "Neeti Bhalla Johnson – Executive VP, President of Global Risk Solutions & Director",
+        "Sweeney": "Timothy Michael Sweeney – President, CEO & Director",
+        "Barbalat": "Vlad Yakov Barbalat – Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director",
+        "Stogel": "Chad Stogel – Spectrum Asset Management, Inc."
+    }
+
+    # Relabel transcript speaker lines using map
+    raw_text = relabel_speakers(raw_text, participant_map)
+
     # Try to extract speaker segments with name and title
     speaker_blocks = re.findall(
-        r"(?<=\n)([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z\s]+):([\s\S]*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z\s]+:|\Z)",
+        r"(?<=\n)([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+):([\s\S]*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+:|\Z)",
         raw_text
     )
 
@@ -58,7 +86,6 @@ if uploaded_file:
             speaker_dict.setdefault(key, "")
             speaker_dict[key] += speech.strip() + "\n"
     else:
-        # Fallback: assign all text to a generic speaker
         speaker_dict = {"Unknown Speaker": raw_text}
 
     all_speakers = ["All"] + sorted(speaker_dict.keys())

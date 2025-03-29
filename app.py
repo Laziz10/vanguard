@@ -16,10 +16,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# ✅ MUST BE FIRST: Set page layout
+# Page config
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# Styling tweaks
+# Style
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; }
@@ -27,7 +27,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Optional external CSS
+# Load CSS
 def load_css():
     try:
         with open("style.css") as f:
@@ -36,11 +36,11 @@ def load_css():
         pass
 load_css()
 
-# API key
+# API Key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# --- Session State ---
+# Session state
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -50,7 +50,7 @@ if "chat_history" not in st.session_state:
 if "show_benchmark" not in st.session_state:
     st.session_state.show_benchmark = False
 
-# --- Speaker Titles ---
+# Speakers
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
@@ -61,16 +61,8 @@ speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_title
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown(
-        "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Select View</div>",
-        unsafe_allow_html=True
-    )
-
-    if st.button("Speaker Analysis", use_container_width=True):
+    if st.button("**Speaker Analysis**", use_container_width=True):
         st.session_state.show_benchmark = False
-
-    if st.button("Benchmark Analysis", use_container_width=True):
-        st.session_state.show_benchmark = True
 
     if not st.session_state.show_benchmark:
         selected_speaker = st.selectbox(
@@ -81,21 +73,23 @@ with st.sidebar:
         )
         st.session_state.selected_speaker = selected_speaker
 
-    if st.session_state.uploaded_file is None:
-        st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-        uploaded = st.file_uploader("", type=["pdf"], key="uploader")
-        if uploaded:
-            st.session_state.uploaded_file = uploaded
-            st.rerun()
+    if st.button("**Benchmark Analysis**", use_container_width=True):
+        st.session_state.show_benchmark = True
 
-# --- Main Content ---
+    st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
+    uploaded = st.file_uploader("", type=["pdf"], key="uploader")
+    if uploaded:
+        st.session_state.uploaded_file = uploaded
+        st.rerun()
+
+# --- Main Area ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
-# --- Benchmark Analysis Section ---
+# --- Benchmark Analysis Helpers ---
 def get_10yr_annual_return_comparison():
     years = list(range(2014, 2024))
     msft = [24.16, 19.44, 12.00, 37.66, 18.74, 55.26, 41.04, 51.21, -28.69, 56.80]
@@ -130,7 +124,8 @@ def generate_return_insights():
         "All assets experienced significant drops in 2022 during tech sector correction."
     ]
 
-# --- Display Main Content ---
+# --- MAIN LOGIC ---
+
 if st.session_state.show_benchmark:
     st.markdown("## Benchmark Analysis")
     df_returns = get_10yr_annual_return_comparison()
@@ -139,6 +134,7 @@ if st.session_state.show_benchmark:
     st.markdown("### Insights")
     for insight in generate_return_insights():
         st.markdown(f"- {insight}")
+
 else:
     if uploaded_file:
         pdf_bytes = BytesIO(uploaded_file.getvalue())

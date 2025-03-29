@@ -14,10 +14,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# ✅ MUST BE FIRST: Set page layout
+# ✅ Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# ✅ Refined spacing to align Speaker & Vanguard logo
+# ✅ Refined spacing
 st.markdown("""
     <style>
     .block-container {
@@ -52,7 +52,7 @@ if "chat_history" not in st.session_state:
 if "selected_benchmark" not in st.session_state:
     st.session_state.selected_benchmark = "VGT"
 
-# Updated Speakers List with positions in braces
+# Speakers and Benchmark Dropdowns
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
@@ -72,7 +72,7 @@ with st.sidebar:
     selected_speaker = st.selectbox(
         label="Speaker Dropdown",
         options=speakers,
-        index=speakers.index(st.session_state.selected_speaker) if st.session_state.selected_speaker in speakers else 0,
+        index=speakers.index(st.session_state.selected_speaker),
         label_visibility="collapsed"
     )
     st.session_state.selected_speaker = selected_speaker
@@ -128,8 +128,13 @@ if uploaded_file:
 
     if selected_speaker != "All":
         speaker_name_for_matching = selected_speaker.split(" (")[0]
+
+        # Enhanced version of your logic to support both 'Name:' and 'NAME\n'
+        all_speaker_names = list(speaker_titles.keys())
+        boundary_pattern = "|".join(re.escape(name) for name in all_speaker_names if name != speaker_name_for_matching)
+
         pattern = re.compile(
-            rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=(?:[A-Z][a-z]+\s*){{1,3}}:\s|$)",
+            rf"(?i){re.escape(speaker_name_for_matching)}[\s:]*\n(.*?)(?=\n(?:{boundary_pattern})[\s:]*\n|$)",
             re.DOTALL
         )
         matches = pattern.findall(raw_text)

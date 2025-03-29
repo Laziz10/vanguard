@@ -46,7 +46,7 @@ if "selected_speaker" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "selected_benchmark" not in st.session_state:
-    st.session_state.selected_benchmark = "VGT"
+    st.session_state.selected_benchmark = None
 
 speaker_titles = {
     "Brett Iversen": "CVP",
@@ -58,28 +58,34 @@ speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_title
 benchmark_stocks = ["VGT", "GOOGL", "AAPL", "AMZN"]
 
 with st.sidebar:
-    st.markdown("""
-        <div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>
-    """, unsafe_allow_html=True)
-    selected_speaker = st.selectbox(
-        label="Speaker Dropdown",
-        options=speakers,
-        index=speakers.index(st.session_state.selected_speaker),
-        label_visibility="collapsed"
-    )
-    st.session_state.selected_speaker = selected_speaker
+    view_mode = st.radio("Select View", ["Speaker Analysis", "Benchmark Analysis"])
 
-    st.markdown("""
-        <div style='color:white; font-weight:bold; font-size:18px; margin-top:1rem; margin-bottom:0.25rem;'>Benchmark Analysis</div>
-    """, unsafe_allow_html=True)
-    selected_benchmark = st.selectbox(
-        label="Benchmark Dropdown",
-        options=benchmark_stocks,
-        index=benchmark_stocks.index(st.session_state.selected_benchmark),
-        label_visibility="collapsed",
-        key="benchmark_dropdown"
-    )
-    st.session_state.selected_benchmark = selected_benchmark
+    if view_mode == "Speaker Analysis":
+        st.markdown("""
+            <div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>
+        """, unsafe_allow_html=True)
+        selected_speaker = st.selectbox(
+            label="Speaker Dropdown",
+            options=speakers,
+            index=speakers.index(st.session_state.selected_speaker),
+            label_visibility="collapsed"
+        )
+        st.session_state.selected_speaker = selected_speaker
+        st.session_state.selected_benchmark = None
+
+    elif view_mode == "Benchmark Analysis":
+        st.markdown("""
+            <div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Benchmark Analysis</div>
+        """, unsafe_allow_html=True)
+        selected_benchmark = st.selectbox(
+            label="Benchmark Dropdown",
+            options=benchmark_stocks,
+            index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
+            label_visibility="collapsed",
+            key="benchmark_dropdown"
+        )
+        st.session_state.selected_benchmark = selected_benchmark
+        st.session_state.selected_speaker = "All"
 
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
@@ -110,14 +116,14 @@ def handle_question(vectorstore, llm):
     st.session_state.chat_input = ""
 
 # --- Benchmark Analysis ---
-if selected_benchmark in benchmark_stocks:
+if selected_benchmark:
     years = list(range(2014, 2025))
     prices = {
-        "MSFT": [37.41, 42.43, 56.68, 85.54, 101.57, 157.70, 222.42, 336.32, 258.86, 313.85, 410.50],
-        "VGT":  [95.21, 102.53, 120.44, 160.84, 190.20, 238.88, 309.65, 354.29, 287.52, 388.67, 460.32],
-        "GOOGL":[31.40, 37.52, 48.12, 68.54, 90.26, 122.70, 145.88, 132.15, 118.67, 141.12, 155.12],
-        "AAPL": [17.25, 22.87, 29.45, 44.32, 57.90, 78.35, 110.12, 137.76, 129.45, 162.32, 190.15],
-        "AMZN": [300.35, 322.48, 378.65, 410.84, 442.30, 487.54, 510.22, 472.15, 390.12, 425.76, 475.60]
+        "MSFT": [36.35, 40.12, 52.12, 74.22, 101.57, 134.92, 157.70, 222.42, 295.44, 313.85, 375.62],
+        "VGT":  [83.40, 90.23, 108.87, 137.26, 170.03, 209.88, 238.65, 309.11, 358.74, 388.67, 420.95],
+        "GOOGL":[26.33, 30.42, 39.10, 52.88, 74.91, 100.21, 124.34, 151.77, 137.85, 141.12, 160.54],
+        "AAPL": [11.64, 14.25, 18.95, 28.61, 39.25, 55.56, 73.41, 101.67, 126.03, 162.32, 189.21],
+        "AMZN": [293.52, 312.65, 351.22, 389.61, 442.30, 497.22, 535.65, 566.74, 603.18, 625.44, 678.92]
     }
 
     def compute_yoy_growth(prices):
@@ -153,7 +159,7 @@ if selected_benchmark in benchmark_stocks:
     st.markdown(f"<div style='color:black; font-size:16px'>{insight}</div>", unsafe_allow_html=True)
 
 # --- Transcript + Speaker Summary ---
-if uploaded_file:
+if uploaded_file and not selected_benchmark:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])

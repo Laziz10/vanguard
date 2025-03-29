@@ -215,4 +215,39 @@ if uploaded_file:
                             retriever=vectorstore.as_retriever(),
                             chain_type="stuff"
                         )
-                        answer = qa_chain
+                        answer = qa_chain.run(question)
+                        st.session_state.chat_history.append({"role": "ai", "content": answer})
+                        st.rerun()
+            except Exception as e:
+                st.warning(f"Could not generate follow-up questions: {e}")
+        else:
+            st.info("Transcript not available for generating follow-up questions.")
+
+# Q&A handler
+def handle_question(vectorstore, llm):
+    user_input = st.session_state.chat_input.strip()
+    if not user_input:
+        return
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        chain_type="stuff"
+    )
+    answer = qa_chain.run(user_input)
+    st.session_state.chat_history.append({"role": "ai", "content": answer})
+    st.session_state.chat_input = ""
+
+# Function to generate and download PDF
+def generate_pdf(pdf_filename):
+    pdf_file = BytesIO()
+    c = canvas.Canvas(pdf_file, pagesize=letter)
+    c.setFont("Helvetica", 10)
+
+    # Add Title
+    c.drawString(72, 750, "Earnings Call Summary and Q&A")
+
+    # Add Summary Text
+    y_position = 730
+    c.drawString(72, y_position, "Summary of Earnings Call:")
+    y_position

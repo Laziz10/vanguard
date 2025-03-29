@@ -149,14 +149,16 @@ if selected_benchmark:
             df_formatted[col] = df_formatted[col].apply(lambda x: f"{x}%" if pd.notnull(x) else "—")
 
     styled_html = (
-        "<style>"
-        "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
-        "th, td { padding: 8px 12px; text-align: center; font-weight: bold; border: 1px solid #ddd; }"
-         "th { background-color: #f0f0f0; text-align: center; }"
-        "</style>"
-        + df_formatted.to_html(index=False, escape=False)
+    "<style>"
+    "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
+    "th, td { padding: 8px 12px; font-weight: bold; border: 1px solid #ddd; }"
+    "th { background-color: #f0f0f0 !important; text-align: center !important; }"
+    "thead th { text-align: center !important; }"
+    "td { text-align: center; }"
+    "</style>"
+    + df_formatted.to_html(index=False, escape=False)
     )
-
+ 
     st.markdown(f"### Annual Price & Growth: {selected_benchmark} vs MSFT (2014–2024)")
     st.markdown(styled_html, unsafe_allow_html=True)
 

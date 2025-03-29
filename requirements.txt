@@ -6,3 +6,4 @@ langchain
 faiss-cpu
 langchain-community
 tiktoken
+sentence-transformers

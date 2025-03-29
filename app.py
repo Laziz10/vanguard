@@ -14,7 +14,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# ✅ MUST BE FIRST
+# ✅ MUST BE FIRST: Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
 # ✅ Refined spacing to align Speaker & Vanguard logo
@@ -24,7 +24,7 @@ st.markdown("""
         padding-top: 1rem;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: -0.5rem !important;
+        padding-top: 0.3rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -38,7 +38,7 @@ def load_css():
         pass
 load_css()
 
-# Load API key
+# Load OpenAI key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
@@ -50,19 +50,17 @@ if "selected_speaker" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Speakers
+# Updated Speakers List
 speaker_titles = {
-    "Christopher Locke Peirce": "Executive VP & CFO",
-    "Hamid Talal Mirza": "Executive VP, President of US Retail Markets & Director",
-    "Neeti Bhalla Johnson": "Executive VP, President of Global Risk Solutions & Director",
-    "Robert Pietsch": "",
-    "Timothy Michael Sweeney": "President, CEO & Director",
-    "Vlad Yakov Barbalat": "Chief Investment Officer, Executive VP, President of Liberty Mutual Investments & Director",
-    "Chad Stogel": "Spectrum Asset Management, Inc."
+    "Brett Iversen": "CVP",
+    "Satya Nadella": "CEO",
+    "Amy Hood": "CFO",
+    "Alice Jolla": "CAO",
+    "Keith Dolliver": "Corporate Secretary"
 }
 speakers = ["All"] + list(speaker_titles.keys())
 
-# Sidebar
+# --- Sidebar ---
 with st.sidebar:
     st.markdown(
         "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
@@ -96,7 +94,7 @@ with st.sidebar:
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
-# Main area
+# --- Main Area ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -172,7 +170,7 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
-        # Q&A
+        # --- Q&A ---
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
@@ -188,7 +186,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # Follow-Up Questions
+        # --- Follow-Up Questions ---
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (

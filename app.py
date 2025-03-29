@@ -25,22 +25,14 @@ def load_css():
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 load_css()
 
-# OpenAI API key
+# OpenAI API key securely from Streamlit secrets
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
 # Sidebar
 with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-
-    if "file_uploaded" not in st.session_state:
-        uploaded_file = st.file_uploader("", type=["pdf"])
-        if uploaded_file:
-            st.session_state["file_uploaded"] = uploaded_file
-            st.rerun()
-    else:
-        uploaded_file = st.session_state["file_uploaded"]
-        st.success("✅ File uploaded successfully")
+    uploaded_file = st.file_uploader("", type=["pdf"])
 
     st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Speaker", ["All"])
@@ -49,8 +41,7 @@ with st.sidebar:
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
-if "file_uploaded" in st.session_state:
-    uploaded_file = st.session_state["file_uploaded"]
+if uploaded_file:
     with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
         raw_text = ""
         for page in doc:
@@ -62,13 +53,13 @@ if "file_uploaded" in st.session_state:
         matches = speaker_pattern.findall(raw_text)
         raw_text = "\n".join(matches)
 
-    # Split into chunks
+    # Set fixed chunk size
     chunk_size = 500
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = splitter.create_documents([raw_text])
 
     try:
-        # Embedding and Vectorstore
+        # Embedding
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_documents(chunks, embeddings)
 
@@ -84,9 +75,11 @@ if "file_uploaded" in st.session_state:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Clean and format summary
+        # Format sectioned summary
         styled_summary = ""
         raw_lines = response.split("\n")
+
+        # Filter out empty lines and disclaimers
         lines = [
             line.strip() for line in raw_lines
             if line.strip()
@@ -124,12 +117,13 @@ if "file_uploaded" in st.session_state:
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")
 
-    # Chat-style Q&A
+    # Chat-style Q&A section
     st.markdown("### Ask a Question")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
+    # Define Q&A callback
     def handle_question():
         user_input = st.session_state.chat_input.strip()
         if not user_input:
@@ -147,8 +141,10 @@ if "file_uploaded" in st.session_state:
 
         st.session_state.chat_input = ""  # Clear input
 
+    # Input box with callback
     st.text_input("", key="chat_input", on_change=handle_question)
 
+    # Display Q&A side-by-side (most recent first)
     qa_pairs = []
     temp = {}
 

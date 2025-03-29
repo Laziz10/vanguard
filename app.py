@@ -98,7 +98,6 @@ if uploaded_file:
         bullet_group = ""
 
         for line in lines:
-            # Remove numbering and normalize for matching
             normalized_line = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
             if any(normalized_line.lower().startswith(title.lower()) for title in section_titles):
                 if bullet_group:
@@ -124,12 +123,12 @@ if uploaded_file:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    def clear_input():
-        st.session_state.chat_input = ""
+    # Define Q&A callback
+    def handle_question():
+        user_input = st.session_state.chat_input.strip()
+        if not user_input:
+            return
 
-    user_input = st.text_input("Ask a question", key="chat_input", on_change=clear_input)
-
-    if user_input := st.session_state.get("chat_input", "").strip():
         st.session_state.chat_history.append({"role": "user", "content": user_input})
 
         qa_chain = RetrievalQA.from_chain_type(
@@ -139,6 +138,11 @@ if uploaded_file:
         )
         answer = qa_chain.run(user_input)
         st.session_state.chat_history.append({"role": "ai", "content": answer})
+
+        st.session_state.chat_input = ""  # Clear input
+
+    # Input box with callback
+    st.text_input("Ask a question", key="chat_input", on_change=handle_question)
 
     # Display Q&A side-by-side (most recent first)
     qa_pairs = []

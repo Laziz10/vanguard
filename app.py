@@ -52,7 +52,7 @@ speakers = ["All"] + list(speaker_titles.keys())
 
 # Sidebar
 with st.sidebar:
-    # Speaker dropdown always shown
+    # Speaker dropdown is always shown
     st.markdown("### **Call Participants**", unsafe_allow_html=True)
     selected_speaker = st.selectbox("Select a speaker to analyze their speech:", options=speakers, index=speakers.index(st.session_state.selected_speaker))
     st.session_state.selected_speaker = selected_speaker
@@ -62,29 +62,30 @@ with st.sidebar:
         if title:
             st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
 
-    # File uploader only shown if no file is uploaded
-    if not st.session_state.uploaded_file:
+    # File uploader appears only if not uploaded
+    if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-        uploaded = st.file_uploader("", type=["pdf"])
-        if uploaded:
+        uploaded = st.file_uploader("", type=["pdf"], key="uploader")
+        if uploaded is not None:
             st.session_state.uploaded_file = uploaded
+            st.experimental_rerun()
 
-# Main UI
+# Get persistent state values
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
+# Main UI
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
 if uploaded_file:
-    # Fix for PyMuPDF EmptyFileError
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = ""
         for page in doc:
             raw_text += page.get_text()
 
-    # Filter transcript by selected speaker
+    # Filter by speaker
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
@@ -100,17 +101,14 @@ if uploaded_file:
     if not raw_text.strip():
         st.warning("No transcript text available for summarization.")
     else:
-        # Text chunking
         splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
         chunks = splitter.create_documents([raw_text])
 
         try:
-            # Embeddings & LLM setup
             embeddings = OpenAIEmbeddings()
             vectorstore = FAISS.from_documents(chunks, embeddings)
             llm = ChatOpenAI(temperature=0)
 
-            # Summary generation
             summary_prompt = (
                 "Summarize the earnings call into four main sections:\n"
                 "1. Key financial highlights\n"
@@ -157,7 +155,7 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
-        # Q&A Section
+        # Q&A
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
@@ -174,7 +172,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # Suggested Follow-Up Questions
+        # Follow-up Questions
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
@@ -186,7 +184,6 @@ if uploaded_file:
             try:
                 followup_response = llm.predict(followup_prompt)
                 followup_questions = [q.strip("-• ").strip() for q in followup_response.strip().split("\n") if q.strip()]
-
                 for i, question in enumerate(followup_questions):
                     if st.button(question, key=f"followup_q_{i}"):
                         st.session_state.chat_history.append({"role": "user", "content": question})
@@ -201,9 +198,9 @@ if uploaded_file:
             except Exception as e:
                 st.warning(f"Could not generate follow-up questions: {e}")
         else:
-            st.info("Transcript not available for follow-up generation.")
+            st.info("Transcript not available for generating follow-up questions.")
 
-# Question handler
+# Q&A handler
 def handle_question(vectorstore, llm):
     user_input = st.session_state.chat_input.strip()
     if not user_input:

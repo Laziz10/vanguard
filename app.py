@@ -5,7 +5,7 @@ if not hasattr(np, 'float'): np.float = float
 import os
 import re
 import streamlit as st
-import fitz  # PyMuPDF
+import fitz
 from io import BytesIO
 
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -14,23 +14,35 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# Load CSS
+# Custom CSS for layout fixes
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 1rem;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 1.5rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Set page layout
+st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
+
+# Load CSS from file (optional)
 def load_css():
     try:
         with open("style.css") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except:
         pass
-
-# Page setup
-st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 load_css()
 
-# OpenAI API key
+# OpenAI Key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Session state defaults
+# Session defaults
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -52,17 +64,26 @@ speakers = ["All"] + list(speaker_titles.keys())
 
 # Sidebar
 with st.sidebar:
-    # Speaker Analysis section always shown
-    st.markdown("### <span style='color:white; font-weight:bold;'>Speaker Analysis</span>", unsafe_allow_html=True)
-    selected_speaker = st.selectbox("", options=speakers, index=speakers.index(st.session_state.selected_speaker))
+    st.markdown(
+        "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
+        unsafe_allow_html=True
+    )
+    selected_speaker = st.selectbox(
+        label="Speaker Dropdown",
+        options=speakers,
+        index=speakers.index(st.session_state.selected_speaker),
+        label_visibility="collapsed"
+    )
     st.session_state.selected_speaker = selected_speaker
 
     if selected_speaker != "All":
         title = speaker_titles.get(selected_speaker, "")
         if title:
-            st.markdown(f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>", unsafe_allow_html=True)
+            st.markdown(
+                f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>",
+                unsafe_allow_html=True
+            )
 
-    # Upload field (hidden after PDF upload)
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -70,11 +91,11 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# Get values from session
+# Load session values
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 
-# Main UI
+# Main area
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -85,7 +106,6 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Speaker filtering
     if selected_speaker != "All":
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
@@ -155,11 +175,9 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
-        # Q&A
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
-        # Display Q&A
         for pair in reversed([
             {"question": q["content"], "answer": a["content"]}
             for q, a in zip(st.session_state.chat_history[::2], st.session_state.chat_history[1::2])
@@ -172,7 +190,6 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # Follow-up Questions
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (

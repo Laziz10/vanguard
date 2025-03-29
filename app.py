@@ -66,7 +66,6 @@ if uploaded_file:
 
     # Filter transcript by speaker name based on formatting style in transcript
     if selected_speaker != "All":
-        # Match the speaker's name on a line by itself followed by their speech
         pattern = re.compile(
             rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
             re.DOTALL
@@ -188,3 +187,36 @@ if uploaded_file:
                 <div style="flex: 2; color: black; font-weight: bold;">A: {pair['answer']}</div>
             </div>
             """, unsafe_allow_html=True)
+
+        # Suggested Follow-Up Questions
+        st.markdown("### Suggested Follow-Up Questions")
+
+        if raw_text.strip():
+            followup_prompt = (
+                f"Based on the following earnings call transcript, suggest 3 insightful follow-up questions "
+                f"that an analyst might ask to better understand the discussion.\n\n"
+                f"---\n\n{raw_text[:2000]}\n\n---\n\n"
+                f"List each question on a new line, without numbering."
+            )
+
+            try:
+                followup_response = llm.predict(followup_prompt)
+                followup_questions = [q.strip("-• ").strip() for q in followup_response.strip().split("\n") if q.strip()]
+
+                for i, question in enumerate(followup_questions):
+                    if st.button(question, key=f"followup_q_{i}"):
+                        st.session_state.chat_history.append({"role": "user", "content": question})
+
+                        qa_chain = RetrievalQA.from_chain_type(
+                            llm=llm,
+                            retriever=vectorstore.as_retriever(),
+                            chain_type="stuff"
+                        )
+                        answer = qa_chain.run(question)
+                        st.session_state.chat_history.append({"role": "ai", "content": answer})
+                        st.rerun()
+
+            except Exception as e:
+                st.warning(f"Could not generate follow-up questions: {e}")
+        else:
+            st.info("Transcript not available for generating follow-up questions.")

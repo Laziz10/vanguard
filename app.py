@@ -64,119 +64,127 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Filter transcript by selected speaker
+    # Filter transcript by speaker name based on formatting style in transcript
     if selected_speaker != "All":
-        speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
-        matches = speaker_pattern.findall(raw_text)
+        # Match the speaker's name on a line by itself followed by their speech
+        pattern = re.compile(
+            rf"{selected_speaker}\s*\n(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
+            re.DOTALL
+        )
+        matches = pattern.findall(raw_text)
+
         if matches:
-            raw_text = "\n".join(matches)
+            raw_text = "\n".join(matches).strip()
         else:
             st.warning(f"No speech found for {selected_speaker}. Displaying empty result.")
             raw_text = ""
 
-    # Text splitting
-    chunk_size = 500
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
-    chunks = splitter.create_documents([raw_text])
+    if not raw_text.strip():
+        st.warning("No transcript text available for summarization.")
+    else:
+        # Split into chunks
+        chunk_size = 500
+        splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
+        chunks = splitter.create_documents([raw_text])
 
-    try:
-        # Embeddings and vectorstore
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(chunks, embeddings)
+        try:
+            # Embeddings + Vectorstore
+            embeddings = OpenAIEmbeddings()
+            vectorstore = FAISS.from_documents(chunks, embeddings)
 
-        # LLM summary
-        llm = ChatOpenAI(temperature=0)
-        summary_prompt = (
-            "Summarize the earnings call into four main sections:\n"
-            "1. Key financial highlights\n"
-            "2. Risks and concerns\n"
-            "3. Opportunities or forward-looking statements\n"
-            "4. General sentiment\n"
-            "Format each as a section title followed by 1–2 bullet points."
-        )
-        response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
+            # Summary generation
+            llm = ChatOpenAI(temperature=0)
+            summary_prompt = (
+                "Summarize the earnings call into four main sections:\n"
+                "1. Key financial highlights\n"
+                "2. Risks and concerns\n"
+                "3. Opportunities or forward-looking statements\n"
+                "4. General sentiment\n"
+                "Format each as a section title followed by 1–2 bullet points."
+            )
+            response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format summary
-        styled_summary = ""
-        raw_lines = response.split("\n")
+            # Format response
+            styled_summary = ""
+            raw_lines = response.split("\n")
 
-        lines = [
-            line.strip() for line in raw_lines
-            if line.strip()
-            and not line.lower().startswith("transcript of")
-            and "sec filings" not in line.lower()
-            and "risks and uncertainties" not in line.lower()
-        ]
+            lines = [
+                line.strip() for line in raw_lines
+                if line.strip()
+                and not line.lower().startswith("transcript of")
+                and "sec filings" not in line.lower()
+                and "risks and uncertainties" not in line.lower()
+            ]
 
-        section_titles = [
-            "Key financial highlights",
-            "Risks and concerns",
-            "Opportunities or forward-looking statements",
-            "General sentiment"
-        ]
+            section_titles = [
+                "Key financial highlights",
+                "Risks and concerns",
+                "Opportunities or forward-looking statements",
+                "General sentiment"
+            ]
 
-        bullet_group = ""
+            bullet_group = ""
 
-        for line in lines:
-            normalized_line = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
-            if any(normalized_line.lower().startswith(title.lower()) for title in section_titles):
-                if bullet_group:
-                    styled_summary += f"<ul>{bullet_group}</ul>"
-                    bullet_group = ""
-                styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{normalized_line}:</p>"
-            else:
-                clean_line = re.sub(r"^[-•\s]+", "", line)
-                bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
+            for line in lines:
+                normalized_line = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
+                if any(normalized_line.lower().startswith(title.lower()) for title in section_titles):
+                    if bullet_group:
+                        styled_summary += f"<ul>{bullet_group}</ul>"
+                        bullet_group = ""
+                    styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{normalized_line}:</p>"
+                else:
+                    clean_line = re.sub(r"^[-•\s]+", "", line)
+                    bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
 
-        if bullet_group:
-            styled_summary += f"<ul>{bullet_group}</ul>"
+            if bullet_group:
+                styled_summary += f"<ul>{bullet_group}</ul>"
 
-        st.markdown("### Summary", unsafe_allow_html=True)
-        st.markdown(styled_summary, unsafe_allow_html=True)
+            st.markdown("### Summary", unsafe_allow_html=True)
+            st.markdown(styled_summary, unsafe_allow_html=True)
 
-    except Exception as e:
-        st.error(f"Vectorstore creation failed: {e}")
+        except Exception as e:
+            st.error(f"Vectorstore creation failed: {e}")
 
-    # Q&A
-    st.markdown("### Ask a Question")
+        # Q&A section
+        st.markdown("### Ask a Question")
 
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = []
 
-    def handle_question():
-        user_input = st.session_state.chat_input.strip()
-        if not user_input:
-            return
+        def handle_question():
+            user_input = st.session_state.chat_input.strip()
+            if not user_input:
+                return
 
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
 
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            retriever=vectorstore.as_retriever(),
-            chain_type="stuff"
-        )
-        answer = qa_chain.run(user_input)
-        st.session_state.chat_history.append({"role": "ai", "content": answer})
-        st.session_state.chat_input = ""
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                retriever=vectorstore.as_retriever(),
+                chain_type="stuff"
+            )
+            answer = qa_chain.run(user_input)
+            st.session_state.chat_history.append({"role": "ai", "content": answer})
+            st.session_state.chat_input = ""
 
-    st.text_input("", key="chat_input", on_change=handle_question)
+        st.text_input("", key="chat_input", on_change=handle_question)
 
-    # Display Q&A
-    qa_pairs = []
-    temp = {}
+        # Display Q&A
+        qa_pairs = []
+        temp = {}
 
-    for entry in st.session_state.chat_history:
-        if entry["role"] == "user":
-            temp["question"] = entry["content"]
-        elif entry["role"] == "ai" and "question" in temp:
-            temp["answer"] = entry["content"]
-            qa_pairs.append(temp)
-            temp = {}
+        for entry in st.session_state.chat_history:
+            if entry["role"] == "user":
+                temp["question"] = entry["content"]
+            elif entry["role"] == "ai" and "question" in temp:
+                temp["answer"] = entry["content"]
+                qa_pairs.append(temp)
+                temp = {}
 
-    for pair in reversed(qa_pairs):
-        st.markdown(f"""
-        <div style="display: flex; gap: 2rem; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div style="flex: 1; color: black; font-weight: bold;">Q: {pair['question']}</div>
-            <div style="flex: 2; color: black; font-weight: bold;">A: {pair['answer']}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        for pair in reversed(qa_pairs):
+            st.markdown(f"""
+            <div style="display: flex; gap: 2rem; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="flex: 1; color: black; font-weight: bold;">Q: {pair['question']}</div>
+                <div style="flex: 2; color: black; font-weight: bold;">A: {pair['answer']}</div>
+            </div>
+            """, unsafe_allow_html=True)

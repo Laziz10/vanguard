@@ -16,7 +16,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# Set page layout
+# Set layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
 st.markdown("""
@@ -26,7 +26,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load external CSS (optional)
 def load_css():
     try:
         with open("style.css") as f:
@@ -35,11 +34,11 @@ def load_css():
         pass
 load_css()
 
-# OpenAI key
+# OpenAI Key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Initialize session state
+# Session State
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -49,7 +48,7 @@ if "chat_history" not in st.session_state:
 if "show_benchmark" not in st.session_state:
     st.session_state.show_benchmark = False
 
-# Speaker list
+# Speakers
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
@@ -60,7 +59,6 @@ speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_title
 
 # --- SIDEBAR ---
 with st.sidebar:
-    # Highlight active tab
     if st.session_state.show_benchmark:
         if st.button("**Speaker Analysis**", use_container_width=True):
             st.session_state.show_benchmark = False
@@ -71,7 +69,6 @@ with st.sidebar:
             </div>
         """, unsafe_allow_html=True)
 
-    # Dropdown under Speaker Analysis
     if not st.session_state.show_benchmark:
         selected_speaker = st.selectbox(
             label="Speaker Dropdown",
@@ -81,7 +78,6 @@ with st.sidebar:
         )
         st.session_state.selected_speaker = selected_speaker
 
-    # Benchmark button
     if st.session_state.show_benchmark:
         st.markdown("""
             <div style="background-color: white; color: black; font-weight: bold; padding: 0.5rem; border-radius: 5px; text-align: center; margin-top: 0.5rem;">
@@ -92,14 +88,13 @@ with st.sidebar:
         if st.button("**Benchmark Analysis**", use_container_width=True):
             st.session_state.show_benchmark = True
 
-    # Upload section
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded = st.file_uploader("", type=["pdf"], key="uploader")
     if uploaded:
         st.session_state.uploaded_file = uploaded
         st.rerun()
 
-# --- MAIN HEADER ---
+# --- MAIN AREA ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -214,14 +209,14 @@ elif uploaded_file:
 
             if 'vectorstore' in locals() and 'llm' in locals():
                 st.markdown("### Ask a Question")
-                st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
+                st.text_input("Ask your question", key="chat_input", label_visibility="collapsed", on_change=lambda: handle_question(vectorstore, llm))
             else:
                 st.info("Summary not ready. Cannot ask questions yet.")
 
         except Exception as e:
             st.error(f"Vectorstore error: {e}")
 
-# Q&A Handler
+# --- Q&A Handler ---
 def handle_question(vectorstore, llm):
     user_input = st.session_state.chat_input.strip()
     if not user_input:

@@ -16,10 +16,9 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# Page config
+# Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# Style
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; }
@@ -27,7 +26,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load CSS
+# Load external CSS (optional)
 def load_css():
     try:
         with open("style.css") as f:
@@ -36,11 +35,11 @@ def load_css():
         pass
 load_css()
 
-# API Key
+# OpenAI key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Session state
+# Initialize session state
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -50,7 +49,7 @@ if "chat_history" not in st.session_state:
 if "show_benchmark" not in st.session_state:
     st.session_state.show_benchmark = False
 
-# Speakers
+# Speaker list
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
@@ -59,11 +58,20 @@ speaker_titles = {
 }
 speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_titles.items()]
 
-# --- Sidebar ---
+# --- SIDEBAR ---
 with st.sidebar:
-    if st.button("**Speaker Analysis**", use_container_width=True):
-        st.session_state.show_benchmark = False
+    # Highlight active tab
+    if st.session_state.show_benchmark:
+        if st.button("**Speaker Analysis**", use_container_width=True):
+            st.session_state.show_benchmark = False
+    else:
+        st.markdown("""
+            <div style="background-color: white; color: black; font-weight: bold; padding: 0.5rem; border-radius: 5px; text-align: center;">
+                Speaker Analysis
+            </div>
+        """, unsafe_allow_html=True)
 
+    # Dropdown under Speaker Analysis
     if not st.session_state.show_benchmark:
         selected_speaker = st.selectbox(
             label="Speaker Dropdown",
@@ -73,23 +81,29 @@ with st.sidebar:
         )
         st.session_state.selected_speaker = selected_speaker
 
-    if st.button("**Benchmark Analysis**", use_container_width=True):
-        st.session_state.show_benchmark = True
+    # Benchmark button
+    if st.session_state.show_benchmark:
+        st.markdown("""
+            <div style="background-color: white; color: black; font-weight: bold; padding: 0.5rem; border-radius: 5px; text-align: center; margin-top: 0.5rem;">
+                Benchmark Analysis
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        if st.button("**Benchmark Analysis**", use_container_width=True):
+            st.session_state.show_benchmark = True
 
+    # Upload section
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded = st.file_uploader("", type=["pdf"], key="uploader")
     if uploaded:
         st.session_state.uploaded_file = uploaded
         st.rerun()
 
-# --- Main Area ---
+# --- MAIN HEADER ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
-uploaded_file = st.session_state.uploaded_file
-selected_speaker = st.session_state.selected_speaker
-
-# --- Benchmark Analysis Helpers ---
+# --- BENCHMARK ANALYSIS SECTION ---
 def get_10yr_annual_return_comparison():
     years = list(range(2014, 2024))
     msft = [24.16, 19.44, 12.00, 37.66, 18.74, 55.26, 41.04, 51.21, -28.69, 56.80]
@@ -125,6 +139,8 @@ def generate_return_insights():
     ]
 
 # --- MAIN LOGIC ---
+uploaded_file = st.session_state.uploaded_file
+selected_speaker = st.session_state.selected_speaker
 
 if st.session_state.show_benchmark:
     st.markdown("## Benchmark Analysis")
@@ -135,103 +151,77 @@ if st.session_state.show_benchmark:
     for insight in generate_return_insights():
         st.markdown(f"- {insight}")
 
-else:
-    if uploaded_file:
-        pdf_bytes = BytesIO(uploaded_file.getvalue())
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            raw_text = "".join([page.get_text() for page in doc])
+elif uploaded_file:
+    pdf_bytes = BytesIO(uploaded_file.getvalue())
+    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+        raw_text = "".join([page.get_text() for page in doc])
 
-        if selected_speaker != "All":
-            speaker_name = selected_speaker.split(" (")[0]
-            pattern = re.compile(
-                rf"{re.escape(speaker_name)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
-                re.DOTALL | re.IGNORECASE
+    if selected_speaker != "All":
+        speaker_name = selected_speaker.split(" (")[0]
+        pattern = re.compile(
+            rf"{re.escape(speaker_name)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
+            re.DOTALL | re.IGNORECASE
+        )
+        matches = pattern.findall(raw_text)
+        raw_text = "\n".join(matches).strip() if matches else ""
+        if not matches:
+            st.warning(f"No speech found for {selected_speaker}.")
+
+    if not raw_text.strip():
+        st.warning("No transcript text available.")
+    else:
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
+        chunks = splitter.create_documents([raw_text])
+        try:
+            embeddings = OpenAIEmbeddings()
+            vectorstore = FAISS.from_documents(chunks, embeddings)
+            llm = ChatOpenAI(temperature=0)
+
+            summary_prompt = (
+                "Summarize the earnings call into four main sections:\n"
+                "1. Key financial highlights\n"
+                "2. Risks and concerns\n"
+                "3. Opportunities or forward-looking statements\n"
+                "4. General sentiment\n"
+                "Format each as a section title followed by 1–2 bullet points."
             )
-            matches = pattern.findall(raw_text)
-            raw_text = "\n".join(matches).strip() if matches else ""
-            if not matches:
-                st.warning(f"No speech found for {selected_speaker}.")
+            response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
+            lines = [line.strip() for line in response.split("\n") if line.strip()]
 
-        if not raw_text.strip():
-            st.warning("No transcript text available.")
-        else:
-            splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
-            chunks = splitter.create_documents([raw_text])
-            try:
-                embeddings = OpenAIEmbeddings()
-                vectorstore = FAISS.from_documents(chunks, embeddings)
-                llm = ChatOpenAI(temperature=0)
+            section_titles = [
+                "Key financial highlights",
+                "Risks and concerns",
+                "Opportunities or forward-looking statements",
+                "General sentiment"
+            ]
 
-                summary_prompt = (
-                    "Summarize the earnings call into four main sections:\n"
-                    "1. Key financial highlights\n"
-                    "2. Risks and concerns\n"
-                    "3. Opportunities or forward-looking statements\n"
-                    "4. General sentiment\n"
-                    "Format each as a section title followed by 1–2 bullet points."
-                )
-                response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
-                lines = [line.strip() for line in response.split("\n") if line.strip()]
+            styled_summary, bullets = "", ""
+            for line in lines:
+                normalized = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
+                if any(normalized.lower().startswith(t.lower()) for t in section_titles):
+                    if bullets:
+                        styled_summary += f"<ul>{bullets}</ul>"
+                        bullets = ""
+                    styled_summary += f"<p style='font-weight:bold;'>{normalized}:</p>"
+                else:
+                    bullets += f"<li>{line.strip('-• ')}</li>"
 
-                section_titles = [
-                    "Key financial highlights",
-                    "Risks and concerns",
-                    "Opportunities or forward-looking statements",
-                    "General sentiment"
-                ]
+            if bullets:
+                styled_summary += f"<ul>{bullets}</ul>"
 
-                styled_summary, bullets = "", ""
-                for line in lines:
-                    normalized = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
-                    if any(normalized.lower().startswith(t.lower()) for t in section_titles):
-                        if bullets:
-                            styled_summary += f"<ul>{bullets}</ul>"
-                            bullets = ""
-                        styled_summary += f"<p style='font-weight:bold;'>{normalized}:</p>"
-                    else:
-                        bullets += f"<li>{line.strip('-• ')}</li>"
+            st.markdown("### Summary", unsafe_allow_html=True)
+            st.markdown(styled_summary, unsafe_allow_html=True)
 
-                if bullets:
-                    styled_summary += f"<ul>{bullets}</ul>"
+            if 'vectorstore' in locals() and 'llm' in locals():
+                st.markdown("### Ask a Question")
+                st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
+            else:
+                st.info("Summary not ready. Cannot ask questions yet.")
 
-                st.markdown("### Summary", unsafe_allow_html=True)
-                st.markdown(styled_summary, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Vectorstore error: {e}")
 
-            except Exception as e:
-                st.error(f"Vectorstore error: {e}")
-
-            st.markdown("### Ask a Question")
-            st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
-
-            for pair in reversed([
-                {"question": q["content"], "answer": a["content"]}
-                for q, a in zip(st.session_state.chat_history[::2], st.session_state.chat_history[1::2])
-                if q["role"] == "user" and a["role"] == "ai"
-            ]):
-                st.markdown(f"**Q: {pair['question']}**\n\n**A:** {pair['answer']}")
-
-            st.markdown("### Suggested Follow-Up Questions")
-            try:
-                followup_prompt = (
-                    f"Based on the following earnings call transcript, suggest 3 insightful follow-up questions:\n\n"
-                    f"{raw_text[:2000]}"
-                )
-                followup_response = llm.predict(followup_prompt)
-                followups = [q.strip("-• ").strip() for q in followup_response.split("\n") if q.strip()]
-                for i, q in enumerate(followups):
-                    if st.button(q, key=f"followup_{i}"):
-                        st.session_state.chat_history.append({"role": "user", "content": q})
-                        answer = RetrievalQA.from_chain_type(
-                            llm=llm,
-                            retriever=vectorstore.as_retriever(),
-                            chain_type="stuff"
-                        ).run(q)
-                        st.session_state.chat_history.append({"role": "ai", "content": answer})
-                        st.rerun()
-            except Exception as e:
-                st.warning(f"Follow-up question generation failed: {e}")
-
-# --- Q&A Handler ---
+# Q&A Handler
 def handle_question(vectorstore, llm):
     user_input = st.session_state.chat_input.strip()
     if not user_input:

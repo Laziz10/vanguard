@@ -90,10 +90,14 @@ if uploaded_file:
     # Relabel transcript speaker lines using map
     raw_text = relabel_speakers(raw_text, participant_map)
 
-    # Try to extract speaker segments with name and title
+    # DEBUG: Show first 1000 chars of relabeled transcript
+    st.code(raw_text[:1000], language="text")
+
+    # Try to extract speaker segments with name and title (updated regex)
     speaker_blocks = re.findall(
-        r"(?<=\n)([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+):([\s\S]*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+:|\Z)",
-        raw_text
+        r"([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+):\s*(.*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z&\s]+:|\Z)",
+        raw_text,
+        re.DOTALL
     )
 
     speaker_dict = {}

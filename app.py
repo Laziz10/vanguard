@@ -34,9 +34,6 @@ with st.sidebar:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type=["pdf"])
 
-    st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
-    selected_speaker = st.selectbox("Speaker", ["All"])
-
 # Main UI
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
@@ -47,11 +44,28 @@ if uploaded_file:
         for page in doc:
             raw_text += page.get_text()
 
-    # Optional: Speaker filtering
+    # Extract speaker segments with name and title (support – or - as dash)
+    speaker_blocks = re.findall(
+        r"(?<=\n)([A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z\s]+):([\s\S]*?)(?=\n[A-Z][A-Za-z\s\-]+[–\-]{1,2}\s+[A-Z][A-Za-z\s]+:|\Z)",
+        raw_text
+    )
+
+    speaker_dict = {}
+    for name_title, speech in speaker_blocks:
+        key = name_title.strip()
+        speaker_dict.setdefault(key, "")
+        speaker_dict[key] += speech.strip() + "\n"
+
+    all_speakers = ["All"] + sorted(speaker_dict.keys())
+
+    with st.sidebar:
+        st.markdown("### **Filter Q&A by speaker**", unsafe_allow_html=True)
+        selected_speaker = st.selectbox("Speaker", all_speakers, index=0)
+
     if selected_speaker != "All":
-        speaker_pattern = re.compile(rf"{selected_speaker}:(.*?)(?=\n[A-Z][a-z]+:|\Z)", re.DOTALL)
-        matches = speaker_pattern.findall(raw_text)
-        raw_text = "\n".join(matches)
+        raw_text = speaker_dict.get(selected_speaker, "")
+    else:
+        raw_text = "\n".join(speaker_dict.values())
 
     # Set fixed chunk size
     chunk_size = 500
@@ -79,7 +93,6 @@ if uploaded_file:
         styled_summary = ""
         raw_lines = response.split("\n")
 
-        # Filter out empty lines and disclaimers
         lines = [
             line.strip() for line in raw_lines
             if line.strip()
@@ -123,7 +136,6 @@ if uploaded_file:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Define Q&A callback
     def handle_question():
         user_input = st.session_state.chat_input.strip()
         if not user_input:
@@ -139,12 +151,10 @@ if uploaded_file:
         answer = qa_chain.run(user_input)
         st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-        st.session_state.chat_input = ""  # Clear input
+        st.session_state.chat_input = ""
 
-    # Input box with callback
     st.text_input("", key="chat_input", on_change=handle_question)
 
-    # Display Q&A side-by-side (most recent first)
     qa_pairs = []
     temp = {}
 

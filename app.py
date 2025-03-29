@@ -7,6 +7,7 @@ import re
 import streamlit as st
 import fitz  # PyMuPDF
 from io import BytesIO
+import pandas as pd
 
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -14,10 +15,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# ✅ MUST BE FIRST: Set page layout
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# ✅ Refined spacing
 st.markdown("""
     <style>
     .block-container {
@@ -29,7 +28,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Optional external CSS
 def load_css():
     try:
         with open("style.css") as f:
@@ -38,11 +36,9 @@ def load_css():
         pass
 load_css()
 
-# Load OpenAI key
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key
 
-# Initialize session state
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "selected_speaker" not in st.session_state:
@@ -52,7 +48,6 @@ if "chat_history" not in st.session_state:
 if "selected_benchmark" not in st.session_state:
     st.session_state.selected_benchmark = "VGT"
 
-# Speaker + Benchmark lists
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
@@ -60,14 +55,12 @@ speaker_titles = {
     "Alice Jolla": "CAO"
 }
 speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_titles.items()]
-benchmark_stocks = ["VGT", "GOOGL", "APPL", "AMZN"]
+benchmark_stocks = ["VGT", "GOOGL", "AAPL", "AMZN"]
 
-# --- Sidebar ---
 with st.sidebar:
-    st.markdown(
-        "<div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+        <div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>
+    """, unsafe_allow_html=True)
     selected_speaker = st.selectbox(
         label="Speaker Dropdown",
         options=speakers,
@@ -76,10 +69,9 @@ with st.sidebar:
     )
     st.session_state.selected_speaker = selected_speaker
 
-    st.markdown(
-        "<div style='color:white; font-weight:bold; font-size:18px; margin-top:1rem; margin-bottom:0.25rem;'>Benchmark Analysis</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+        <div style='color:white; font-weight:bold; font-size:18px; margin-top:1rem; margin-bottom:0.25rem;'>Benchmark Analysis</div>
+    """, unsafe_allow_html=True)
     selected_benchmark = st.selectbox(
         label="Benchmark Dropdown",
         options=benchmark_stocks,
@@ -96,7 +88,6 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# --- Main Area ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -118,14 +109,57 @@ def handle_question(vectorstore, llm):
     st.session_state.chat_history.append({"role": "ai", "content": answer})
     st.session_state.chat_input = ""
 
+# --- Benchmark Analysis ---
+if selected_benchmark in benchmark_stocks:
+    years = list(range(2014, 2025))
+    prices = {
+        "MSFT": [37.41, 42.43, 56.68, 85.54, 101.57, 157.70, 222.42, 336.32, 258.86, 313.85, 410.50],
+        "VGT":  [95.21, 102.53, 120.44, 160.84, 190.20, 238.88, 309.65, 354.29, 287.52, 388.67, 460.32],
+        "GOOGL":[31.40, 37.52, 48.12, 68.54, 90.26, 122.70, 145.88, 132.15, 118.67, 141.12, 155.12],
+        "AAPL": [17.25, 22.87, 29.45, 44.32, 57.90, 78.35, 110.12, 137.76, 129.45, 162.32, 190.15],
+        "AMZN": [300.35, 322.48, 378.65, 410.84, 442.30, 487.54, 510.22, 472.15, 390.12, 425.76, 475.60]
+    }
+
+    def compute_yoy_growth(prices):
+        return [None] + [round(((curr - prev) / prev) * 100, 2) for prev, curr in zip(prices[:-1], prices[1:])]
+
+    msft_prices = prices["MSFT"]
+    selected_prices = prices[selected_benchmark]
+    msft_growth = compute_yoy_growth(msft_prices)
+    selected_growth = compute_yoy_growth(selected_prices)
+
+    df = pd.DataFrame({
+        "Year": years,
+        "MSFT Price": msft_prices,
+        "MSFT YoY Growth (%)": msft_growth,
+        f"{selected_benchmark} Price": selected_prices,
+        f"{selected_benchmark} YoY Growth (%)": selected_growth
+    })
+
+    st.markdown(f"### Annual Price & Growth: {selected_benchmark} vs MSFT (2014–2024)")
+    st.dataframe(df, use_container_width=True)
+
+    msft_total = round(((msft_prices[-1] - msft_prices[0]) / msft_prices[0]) * 100, 2)
+    selected_total = round(((selected_prices[-1] - selected_prices[0]) / selected_prices[0]) * 100, 2)
+
+    if selected_total > msft_total:
+        insight = f"{selected_benchmark} outperformed MSFT from 2014 to 2024 with a total growth of {selected_total}% vs {msft_total}%."
+    elif selected_total < msft_total:
+        insight = f"MSFT outperformed {selected_benchmark} from 2014 to 2024 with a total growth of {msft_total}% vs {selected_total}%."
+    else:
+        insight = f"{selected_benchmark} and MSFT had equal growth of {msft_total}% over the 10-year period."
+
+    st.markdown("#### Key Insights")
+    st.markdown(f"<div style='color:black; font-size:16px'>{insight}</div>", unsafe_allow_html=True)
+
+# --- Transcript + Speaker Summary ---
 if uploaded_file:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])
 
     if selected_speaker != "All":
-        # 🟢 Using your original speaker summary logic
-        speaker_name_for_matching = selected_speaker.split(" (")[0] if selected_speaker != "All" else "All"
+        speaker_name_for_matching = selected_speaker.split(" (")[0]
         pattern = re.compile(
             rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
             re.DOTALL | re.IGNORECASE
@@ -180,7 +214,7 @@ if uploaded_file:
                         bullet_group = ""
                     styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{normalized_line}:</p>"
                 else:
-                    clean_line = re.sub(r"^[-•\s]+", "", line)
+                    clean_line = re.sub(r"^[-\u2022\s]+", "", line)
                     bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
 
             if bullet_group:
@@ -192,7 +226,6 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Vectorstore creation failed: {e}")
 
-        # --- Q&A ---
         st.markdown("### Ask a Question")
         st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
@@ -208,7 +241,6 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # --- Follow-Up Questions ---
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
@@ -219,7 +251,7 @@ if uploaded_file:
             )
             try:
                 followup_response = llm.predict(followup_prompt)
-                followup_questions = [q.strip("-• ").strip() for q in followup_response.strip().split("\n") if q.strip()]
+                followup_questions = [q.strip("-\u2022 ").strip() for q in followup_response.strip().split("\n") if q.strip()]
                 for i, question in enumerate(followup_questions):
                     if st.button(question, key=f"followup_q_{i}"):
                         st.session_state.chat_history.append({"role": "user", "content": question})

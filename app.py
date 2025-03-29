@@ -50,15 +50,14 @@ if "selected_speaker" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Updated Speakers List
+# Updated Speakers List with positions in braces
 speaker_titles = {
     "Brett Iversen": "CVP",
     "Satya Nadella": "CEO",
     "Amy Hood": "CFO",
-    "Alice Jolla": "CAO",
-    "Keith Dolliver": "Corporate Secretary"
+    "Alice Jolla": "CAO"
 }
-speakers = ["All"] + list(speaker_titles.keys())
+speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_titles.items()]
 
 # --- Sidebar ---
 with st.sidebar:
@@ -76,7 +75,9 @@ with st.sidebar:
     st.session_state.selected_speaker = selected_speaker
 
     if selected_speaker != "All":
-        title = speaker_titles.get(selected_speaker, "")
+        # Extracting speaker's name from format "Name (Position)"
+        speaker_name = selected_speaker.split(" (")[0]
+        title = speaker_titles.get(speaker_name, "")
         if title:
             st.markdown(
                 f"<p style='color: white; font-style: italic; margin-top: 0.25rem;'>{title}</p>",

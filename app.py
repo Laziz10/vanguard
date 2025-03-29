@@ -75,9 +75,18 @@ if uploaded_file:
         )
         response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        # Format sectioned summary: headers as titles, details as bullets
+        # Format sectioned summary
         styled_summary = ""
-        lines = [line.strip() for line in response.split("\n") if line.strip()]
+        raw_lines = response.split("\n")
+
+        # Filter out empty lines and disclaimers
+        lines = [
+            line.strip() for line in raw_lines
+            if line.strip()
+            and not line.lower().startswith("transcript of")
+            and "sec filings" not in line.lower()
+            and "risks and uncertainties" not in line.lower()
+        ]
 
         section_titles = [
             "Key financial highlights:",
@@ -86,7 +95,6 @@ if uploaded_file:
             "General sentiment:"
         ]
 
-        current_section = ""
         bullet_group = ""
 
         for line in lines:
@@ -96,7 +104,8 @@ if uploaded_file:
                     bullet_group = ""
                 styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{line}</p>"
             else:
-                bullet_group += f"<li><span style='color:black;'>{line}</span></li>"
+                clean_line = re.sub(r"^[-•\s]+", "", line)
+                bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
 
         if bullet_group:
             styled_summary += f"<ul>{bullet_group}</ul>"
@@ -116,7 +125,7 @@ if uploaded_file:
     def clear_input():
         st.session_state.chat_input = ""
 
-    user_input = st.text_input("Ask a question", key="chat_input", on_change=clear_input)
+    user_input = st.text_input("", key="chat_input", on_change=clear_input)
 
     if user_input := st.session_state.get("chat_input", "").strip():
         st.session_state.chat_history.append({"role": "user", "content": user_input})

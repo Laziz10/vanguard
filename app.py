@@ -231,3 +231,50 @@ def handle_question(vectorstore, llm):
     answer = qa_chain.run(user_input)
     st.session_state.chat_history.append({"role": "ai", "content": answer})
     st.session_state.chat_input = ""
+
+# --- Benchmark Analysis Section ---
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def get_10yr_annual_return_comparison():
+    years = list(range(2014, 2024))
+    msft = [24.16, 19.44, 12.00, 37.66, 18.74, 55.26, 41.04, 51.21, -28.69, 56.80]
+    goog = [13.89, 44.56, -1.84, 35.58, -0.80, 28.18, 30.85, 65.17, -38.68, 47.38]
+    aapl = [40.00, -4.64, 10.03, 48.24, -5.39, 88.96, 82.31, 34.65, -26.40, 48.00]
+    vgt  = [18.53, 4.50, 15.89, 36.20, 1.99, 51.60, 44.74, 29.87, -29.78, 51.26]
+    return pd.DataFrame({
+        "Year": years,
+        "MSFT (%)": msft,
+        "GOOG (%)": goog,
+        "AAPL (%)": aapl,
+        "VGT (%)": vgt
+    })
+
+def plot_10yr_stock_returns(df):
+    plt.figure(figsize=(10, 6))
+    for col in df.columns[1:]:
+        plt.plot(df["Year"], df[col], marker='o', label=col)
+    plt.title("10-Year Annual Return Comparison (2014–2023)")
+    plt.xlabel("Year")
+    plt.ylabel("Return (%)")
+    plt.axhline(0, linestyle='--', color='gray')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    st.pyplot(plt)
+
+def generate_return_insights():
+    return [
+        "VGT closely mirrors the average performance of its top holdings like MSFT and AAPL.",
+        "Microsoft delivered the most consistent returns, finishing strong in 2023 with +56.80%.",
+        "Apple had explosive gains in 2019 (+88.96%) and 2020 (+82.31%) but dipped in 2022.",
+        "All four assets saw significant drops in 2022, reflecting broader tech market weakness."
+    ]
+
+st.markdown("## 10-Year Benchmark Analysis")
+df_returns = get_10yr_annual_return_comparison()
+st.dataframe(df_returns, use_container_width=True)
+plot_10yr_stock_returns(df_returns)
+st.markdown("### Insights")
+for insight in generate_return_insights():
+    st.markdown(f"- {insight}")

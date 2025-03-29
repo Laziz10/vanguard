@@ -88,5 +88,17 @@ if uploaded_file:
         st.markdown("### Summary", unsafe_allow_html=True)
         st.markdown(f"<ul>{styled_summary}</ul>", unsafe_allow_html=True)
 
+        # Ask a question
+        st.markdown("### Ask a Question")
+        question = st.text_input("")
+        if question:
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                retriever=vectorstore.as_retriever(),
+                chain_type="stuff"
+            )
+            answer = qa_chain.run(question)
+            st.success(answer)
+
     except Exception as e:
         st.error(f"Vectorstore creation failed: {e}")

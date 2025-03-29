@@ -117,13 +117,13 @@ def handle_question(vectorstore, llm):
 
 # --- Benchmark Analysis ---
 if selected_benchmark:
-    years = list(range(2014, 2025))
+    years = list(range(2015, 2025))
     prices = {
-        "MSFT": [36.35, 40.12, 52.12, 74.22, 101.57, 134.92, 157.70, 222.42, 295.44, 313.85, 375.62],
-        "VGT":  [83.40, 90.23, 108.87, 137.26, 170.03, 209.88, 238.65, 309.11, 358.74, 388.67, 420.95],
-        "GOOGL":[26.33, 30.42, 39.10, 52.88, 74.91, 100.21, 124.34, 151.77, 137.85, 141.12, 160.54],
-        "AAPL": [11.64, 14.25, 18.95, 28.61, 39.25, 55.56, 73.41, 101.67, 126.03, 162.32, 189.21],
-        "AMZN": [293.52, 312.65, 351.22, 389.61, 442.30, 497.22, 535.65, 566.74, 603.18, 625.44, 678.92]
+        "MSFT": [40.12, 52.12, 74.22, 101.57, 134.92, 157.70, 222.42, 295.44, 313.85, 375.62],
+        "VGT":  [90.23, 108.87, 137.26, 170.03, 209.88, 238.65, 309.11, 358.74, 388.67, 420.95],
+        "GOOGL":[30.42, 39.10, 52.88, 74.91, 100.21, 124.34, 151.77, 137.85, 141.12, 160.54],
+        "AAPL": [14.25, 18.95, 28.61, 39.25, 55.56, 73.41, 101.67, 126.03, 162.32, 189.21],
+        "AMZN": [312.65, 351.22, 389.61, 442.30, 497.22, 535.65, 566.74, 603.18, 625.44, 678.92]
     }
 
     def compute_yoy_growth(prices):
@@ -142,8 +142,23 @@ if selected_benchmark:
         f"{selected_benchmark} YoY Growth (%)": selected_growth
     })
 
+    # Format YoY columns with % and convert to string
+    df_formatted = df.copy()
+    for col in df_formatted.columns:
+        if "Growth" in col:
+            df_formatted[col] = df_formatted[col].apply(lambda x: f"{x}%" if pd.notnull(x) else "—")
+
+    styled_html = (
+        "<style>"
+        "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
+        "th, td { padding: 8px 12px; text-align: center; font-weight: bold; border: 1px solid #ddd; }"
+        "th { background-color: #f0f0f0; }"
+        "</style>"
+        + df_formatted.to_html(index=False, escape=False)
+    )
+
     st.markdown(f"### Annual Price & Growth: {selected_benchmark} vs MSFT (2014–2024)")
-    st.dataframe(df, use_container_width=True)
+    st.markdown(styled_html, unsafe_allow_html=True)
 
     msft_total = round(((msft_prices[-1] - msft_prices[0]) / msft_prices[0]) * 100, 2)
     selected_total = round(((selected_prices[-1] - selected_prices[0]) / selected_prices[0]) * 100, 2)

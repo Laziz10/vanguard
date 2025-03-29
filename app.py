@@ -7,7 +7,6 @@ import re
 import streamlit as st
 import fitz  # PyMuPDF
 from io import BytesIO
-import yfinance as yf  # For fetching Microsoft financial data
 
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -79,47 +78,6 @@ with st.sidebar:
         label_visibility="collapsed"
     )
     st.session_state.selected_speaker = selected_speaker
-
-    # Add Financial Performance dropdown to the sidebar under Speaker Analysis
-    st.markdown("### **Financial Performance**")
-    financial_option = st.selectbox(
-        label="Select Financial Data",
-        options=["None", "Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024"]
-    )
-
-    if financial_option != "None":
-        # Fetch Microsoft financial data
-        ticker = "MSFT"
-        data = yf.Ticker(ticker)
-        
-        # Get the data (financials, earnings)
-        financials = data.financials
-        earnings = data.earnings
-        balance_sheet = data.balance_sheet
-        
-        # Display the metrics for the selected quarter
-        st.markdown(f"### Financial Performance for {financial_option}")
-        
-        st.markdown("#### **Key Financial Metrics**")
-        try:
-            # Fetch the key metrics from the financial data
-            revenue = financials.loc["Total Revenue"].iloc[0]
-            operating_income = financials.loc["Operating Income"].iloc[0]
-            net_income = financials.loc["Net Income"].iloc[0]
-            eps = earnings.loc["EPS"].iloc[0]
-            
-            # Display the financial metrics
-            st.write(f"**Revenue**: ${revenue:,}")
-            st.write(f"**Operating Income**: ${operating_income:,}")
-            st.write(f"**Net Income**: ${net_income:,}")
-            st.write(f"**Earnings Per Share (EPS)**: ${eps}")
-        except KeyError:
-            st.warning("Unable to retrieve all financial data for the selected quarter.")
-        
-        # Optionally, show a stock price chart for Microsoft
-        st.markdown("#### **Stock Price Chart**")
-        stock_data = data.history(period="1y")
-        st.line_chart(stock_data['Close'])
 
     # Do not show the name of the speaker or title under the dropdown after selection
     # Simply leave this section empty without additional information under the dropdown
@@ -231,7 +189,7 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-        # --- Follow-Up Questions --- 
+        # --- Follow-Up Questions ---
         st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
@@ -261,4 +219,15 @@ if uploaded_file:
 
 # Q&A handler
 def handle_question(vectorstore, llm):
-    user_input = st.session_state
+    user_input = st.session_state.chat_input.strip()
+    if not user_input:
+        return
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        chain_type="stuff"
+    )
+    answer = qa_chain.run(user_input)
+    st.session_state.chat_history.append({"role": "ai", "content": answer})
+    st.session_state.chat_input = ""

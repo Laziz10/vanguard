@@ -342,18 +342,23 @@ if uploaded_file and not selected_benchmark:
                 followup_response = llm.predict(followup_prompt)
                 followup_questions = [q.strip("-\u2022 ").strip() for q in followup_response.strip().split("\n") if q.strip()]
                 for i, question in enumerate(followup_questions):
-                    if st.button(question, key=f"followup_q_{i}", use_container_width=True):
-                        st.session_state.chat_history.append({"role": "user", "content": question})
-    
-                        qa_chain = RetrievalQA.from_chain_type(
-                        llm=llm,
-                        retriever=vectorstore.as_retriever(),
-                        chain_type="stuff"
-                       )
-                        answer = qa_chain.run(question)
-    
-                        st.session_state.chat_history.append({"role": "ai", "content": answer})
+                    button_key = f"followup_q_{i}"
+                    if st.button(question, key=button_key, use_container_width=True):
+                       st.session_state.pending_question = question
 
+            if "pending_question" in st.session_state:
+                question = st.session_state.pending_question
+                st.session_state.chat_history.append({"role": "user", "content": question})
+
+                qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                retriever=vectorstore.as_retriever(),
+                chain_type="stuff"
+                )
+                answer = qa_chain.run(question)
+                st.session_state.chat_history.append({"role": "ai", "content": answer})
+
+    del st.session_state.pending_question  # reset the trigger
             except Exception as e:
                 st.warning(f"Could not generate follow-up questions: {e}")
         else:

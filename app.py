@@ -184,7 +184,7 @@ if selected_benchmark:
 
     st.markdown("#### Key Insights")
     st.markdown(f"<div style='color:black; font-size:16px'>{insight}</div>", unsafe_allow_html=True)
-
+    
 # --- Risk Analysis ---
 if view_mode == "Risk Analysis" and selected_benchmark:
     st.markdown(f"### Risk Assessment: {selected_benchmark}")
@@ -211,6 +211,21 @@ if view_mode == "Risk Analysis" and selected_benchmark:
             "Still subject to sector-wide downturns but mitigated by ETF structure."
         ]
     }
+
+    st.markdown("#### Identified Risks")
+    for risk in risk_insights[selected_benchmark]:
+        st.markdown(f"- {risk}", unsafe_allow_html=True)
+
+    if selected_benchmark == "VGT":
+        st.markdown("#### Summary")
+        st.markdown(
+            "<div style='color:black; font-size:16px'>"
+            "VGT offers a more balanced risk profile by diversifying across multiple tech leaders, "
+            "reducing exposure to individual company setbacks while still capturing overall sector growth."
+            "</div>",
+            unsafe_allow_html=True
+        )
+
 
     st.markdown("#### Identified Risks")
     for risk in risk_insights[selected_benchmark]:

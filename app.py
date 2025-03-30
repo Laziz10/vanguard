@@ -355,4 +355,16 @@ if uploaded_file and not selected_benchmark:
 
         # Process pending question if exists
         if "pending_question" in st.session_state:
+            question = st.session_state.pending_question
+            st.session_state.chat_history.append({"role": "user", "content": question})
+
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                retriever=vectorstore.as_retriever(),
+                chain_type="stuff"
+            )
+            answer = qa_chain.run(question)
+            st.session_state.chat_history.append({"role": "ai", "content": answer})
+
+            del st.session_state.pending_question
 

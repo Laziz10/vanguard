@@ -17,6 +17,7 @@ from langchain.chains import RetrievalQA
 
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
+# --- Global Styling ---
 st.markdown("""
     <style>
     .block-container {
@@ -25,7 +26,11 @@ st.markdown("""
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 0.3rem !important;
     }
-    .stRadio > label, .stSelectbox label {
+    .stRadio label span {
+        color: white !important;
+        font-weight: bold !important;
+    }
+    .stSelectbox label {
         color: white !important;
         font-weight: bold !important;
     }
@@ -67,7 +72,7 @@ sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bo
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
 
-    view_mode = st.radio("Investor Menu", ["Speaker Analysis", "Benchmark Analysis"])
+    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis"])
 
     if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)

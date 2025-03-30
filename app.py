@@ -226,7 +226,6 @@ if view_mode == "Risk Analysis" and selected_benchmark:
         )
         
 if view_mode == "Recommendations":
-    st.markdown("### Vanguard's Core Investing Principles")
 
     st.markdown("""
     <ul style='font-size:16px; color:black; padding-left:1rem'>

@@ -227,7 +227,7 @@ if view_mode == "Risk Analysis" and selected_benchmark:
         
 if view_mode == "Recommendations":
     
-   st.markdown("""
+st.markdown("""
 <ul style='font-size:16px; color:black; padding-left:1rem; line-height:1.8'>
     <li><b>Think long-term</b>: Successful investing requires patience and discipline over decades, not months.</li>
     <li><b>Stay diversified</b>: Broad diversification reduces risk and helps capture market returns.</li>

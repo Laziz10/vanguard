@@ -1,37 +1,109 @@
+/* ============================= */
+/* Layout & Spacing Adjustments */
+/* ============================= */
 
 /* Move content up */
 section.main > div {
     margin-top: -80px;
 }
 
+/* Reduce space below logo and above title */
+img {
+    margin-bottom: -20px !important;
+}
+
+h1 {
+    margin-top: -10px !important;
+}
+
+/* ====================== */
+/* Sidebar Custom Styling */
+/* ====================== */
+
 /* Sidebar background */
 [data-testid="stSidebar"] {
     background-color: #a6192e !important;
 }
 
-/* Sidebar widgets */
-[data-testid="stSidebar"] label, .stSlider label, .stSelectbox label {
+/* Sidebar labels - larger, bold, white */
+[data-testid="stSidebar"] label,
+.stSlider label,
+.stSelectbox label {
+    color: white !important;
+    font-weight: bold !important;
+    font-size: 20px !important;
+}
+
+/* Radio label text (e.g., Speaker Analysis, Benchmark Analysis) */
+section[data-testid="stSidebar"] .stRadio label div[data-testid="stMarkdownContainer"] > p {
     color: white !important;
     font-weight: bold !important;
     font-size: 18px !important;
 }
 
+/* Chunk number text on slider */
+.stSlider span {
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* Slider number (value shown above handle) */
+.stSlider > div[data-baseweb="slider"] span {
+    color: white !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+}
+
+/* Slider labels */
 .stSlider > div > div {
     color: white !important;
     font-weight: bold;
     font-size: 16px;
 }
 
-/* Chunk label numbers in slider */
-span.css-10trblm, span.css-qrbaxs {
+/* ========================== */
+/* File Uploader Custom Style */
+/* ========================== */
+
+/* File uploader filename */
+section[data-testid="stFileUploader"] > div > div > div > span {
     color: white !important;
-    font-weight: bold;
-    font-size: 16px;
+    font-weight: bold !important;
+    font-size: 16px !important;
 }
+
+/* X icon (clear file) styling */
+section[data-testid="stFileUploader"] svg {
+    stroke: white !important;
+    stroke-width: 2 !important;
+}
+
+/* Hide file icon and file size */
+section[data-testid="stFileUploader"] svg,
+section[data-testid="stFileUploader"] .uploadedFileSize {
+    display: none !important;
+}
+
+/* White bold X (remove file icon) */
+section[data-testid="stFileUploader"] svg path {
+    stroke: white !important;
+    stroke-width: 3 !important;
+}
+
+/* ===================== */
+/* Typography & Headings */
+/* ===================== */
 
 /* Title and section headers */
 h1, h2, h3, h4 {
     color: #a6192e !important;
+}
+
+/* Section titles (Summary, Sentiment, etc.) */
+h2, h3, h4 {
+    font-size: 26px !important;
+    font-weight: bold !important;
+    margin-bottom: 0.5rem;
 }
 
 /* Summary bullets */
@@ -44,24 +116,34 @@ ul li {
     margin-bottom: 10px;
 }
 
-/* Sentiment */
+/* General text (e.g. sentiment) */
 .markdown-text-container p {
     font-weight: bold;
     color: black;
 }
 
-/* Suggested question buttons */
+/* ===================== */
+/* Suggested Questions   */
+/* ===================== */
+
 button[kind="secondary"] {
     background-color: #a6192e !important;
     color: white !important;
     border: none !important;
     border-radius: 5px;
     margin-bottom: 8px;
-    text-align: left;
+    text-align: left !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
 }
 
+/* ===================== */
+/* Chat Input Styling    */
+/* ===================== */
+
 /* Q&A label */
-label[for="your-question"], .stTextInput label {
+label[for="your-question"],
+.stTextInput label {
     color: #a6192e !important;
     font-weight: bold;
 }
@@ -78,83 +160,4 @@ div[data-testid="stTextInput"] input {
 /* Hide spinner text */
 .css-1cpxqw2 {
     display: none;
-}
-
-/* Suggested question buttons */
-button[kind="secondary"] {
-    background-color: #a6192e !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 5px;
-    margin-bottom: 8px;
-    text-align: left !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-}
-
-/* Reduce space below logo and above title */
-img {
-    margin-bottom: -20px !important;
-}
-
-h1 {
-    margin-top: -10px !important;
-}
-
-/* Sidebar background */
-[data-testid="stSidebar"] {
-    background-color: #a6192e !important;
-}
-
-/* Sidebar labels - larger, bold, white */
-[data-testid="stSidebar"] label, .stSlider label, .stSelectbox label {
-    color: white !important;
-    font-weight: bold !important;
-    font-size: 20px !important;
-}
-
-/* Chunk number text on slider */
-.stSlider span {
-    color: white !important;
-    font-weight: bold !important;
-}
-
-/* File uploader filename styling */
-section[data-testid="stFileUploader"] > div > div > div > span {
-    color: white !important;
-    font-weight: bold !important;
-    font-size: 16px !important;
-}
-
-/* X icon (clear file) styling */
-section[data-testid="stFileUploader"] svg {
-    stroke: white !important;
-    stroke-width: 2 !important;
-}
-
-/* SECTION TITLES (like Summary, Sentiment, etc.) */
-h2, h3, h4 {
-    font-size: 26px !important;
-    font-weight: bold !important;
-    color: #a6192e !important;
-    margin-bottom: 0.5rem;
-}
-
-/* Slider number (value shown above handle) */
-.stSlider > div[data-baseweb="slider"] span {
-    color: white !important;
-    font-weight: bold !important;
-    font-size: 16px !important;
-}
-
-/* Hide file icon and file size */
-section[data-testid="stFileUploader"] svg,
-section[data-testid="stFileUploader"] .uploadedFileSize {
-    display: none !important;
-}
-
-/* White bold X (remove file icon) */
-section[data-testid="stFileUploader"] svg path {
-    stroke: white !important;
-    stroke-width: 3 !important;
 }

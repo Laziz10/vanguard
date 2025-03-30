@@ -343,16 +343,16 @@ if uploaded_file and not selected_benchmark:
                 followup_questions = [q.strip("-\u2022 ").strip() for q in followup_response.strip().split("\n") if q.strip()]
                 for i, question in enumerate(followup_questions):
                     if st.button(question, key=f"followup_q_{i}", use_container_width=True):
-    st.session_state.chat_history.append({"role": "user", "content": question})
+                        st.session_state.chat_history.append({"role": "user", "content": question})
     
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=vectorstore.as_retriever(),
-        chain_type="stuff"
-    )
-    answer = qa_chain.run(question)
+                        qa_chain = RetrievalQA.from_chain_type(
+                        llm=llm,
+                        retriever=vectorstore.as_retriever(),
+                        chain_type="stuff"
+                       )
+                        answer = qa_chain.run(question)
     
-    st.session_state.chat_history.append({"role": "ai", "content": answer})
+                        st.session_state.chat_history.append({"role": "ai", "content": answer})
     
     # Optional: store last asked follow-up
     st.session_state.last_followup = question  # <-- not required, just for tracking

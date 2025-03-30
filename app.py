@@ -190,7 +190,7 @@ if view_mode == "Risk Analysis" and selected_benchmark:
     st.markdown(f"### Risk Assessment: {selected_benchmark}")
 
     risk_insights = {
-        "MSFT": [
+        "AMZN": [
             "Regulatory pressure on cloud and AI services.",
             "Dependence on enterprise contracts for revenue stability.",
             "High valuation may limit upside during market corrections."

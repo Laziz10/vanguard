@@ -105,9 +105,7 @@ with st.sidebar:
             st.rerun()
 
 # --- Main Header ---
-st.image("vanguard_logo.png", width=180)
-if view_mode == "Speaker Analysis":
-    st.markdown("## **Earnings Call Summarizer**")
+st.image("vanguard_logo.png", width=180)  
 
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker

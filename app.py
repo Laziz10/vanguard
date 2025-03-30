@@ -227,20 +227,6 @@ if view_mode == "Risk Analysis" and selected_benchmark:
         )
 
 
-    st.markdown("#### Identified Risks")
-    for risk in risk_insights[selected_benchmark]:
-        st.markdown(f"- {risk}", unsafe_allow_html=True)
-
-    if selected_benchmark == "VGT":
-        st.markdown("#### Summary")
-        st.markdown(
-            "<div style='color:black; font-size:16px'>"
-            "VGT offers a more balanced risk profile by diversifying across multiple tech leaders, "
-            "reducing exposure to individual company setbacks while still capturing overall sector growth."
-            "</div>", unsafe_allow_html=True
-        )
-
-
 # --- Transcript + Speaker Summary ---
 if uploaded_file and not selected_benchmark:
     pdf_bytes = BytesIO(uploaded_file.getvalue())

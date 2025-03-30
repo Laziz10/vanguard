@@ -25,6 +25,10 @@ st.markdown("""
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 0.3rem !important;
     }
+    .stRadio > label, .stSelectbox label {
+        color: white !important;
+        font-weight: bold !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -57,13 +61,16 @@ speaker_titles = {
 speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_titles.items()]
 benchmark_stocks = ["VGT", "GOOGL", "AAPL", "AMZN"]
 
+# --- Sidebar ---
+sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bottom:0.25rem;"
+
 with st.sidebar:
-    view_mode = st.radio("Select View", ["Speaker Analysis", "Benchmark Analysis"])
+    st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
+
+    view_mode = st.radio("Investor Menu", ["Speaker Analysis", "Benchmark Analysis"])
 
     if view_mode == "Speaker Analysis":
-        st.markdown("""
-            <div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Speaker Analysis</div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
         selected_speaker = st.selectbox(
             label="Speaker Dropdown",
             options=speakers,
@@ -74,9 +81,7 @@ with st.sidebar:
         st.session_state.selected_benchmark = None
 
     elif view_mode == "Benchmark Analysis":
-        st.markdown("""
-            <div style='color:white; font-weight:bold; font-size:18px; margin-bottom:0.25rem;'>Benchmark Analysis</div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div style='{sidebar_header_style}'>Benchmark Analysis</div>", unsafe_allow_html=True)
         selected_benchmark = st.selectbox(
             label="Benchmark Dropdown",
             options=benchmark_stocks,
@@ -94,6 +99,7 @@ with st.sidebar:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
+# --- Main Header ---
 st.image("vanguard_logo.png", width=180)
 st.markdown("## **Earnings Call Summarizer**")
 
@@ -142,23 +148,22 @@ if selected_benchmark:
         f"{selected_benchmark} YoY Growth (%)": selected_growth
     })
 
-    # Format YoY columns with % and convert to string
     df_formatted = df.copy()
     for col in df_formatted.columns:
         if "Growth" in col:
             df_formatted[col] = df_formatted[col].apply(lambda x: f"{x}%" if pd.notnull(x) else "—")
 
     styled_html = (
-    "<style>"
-    "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
-    "th, td { padding: 8px 12px; font-weight: bold; border: 1px solid #ddd; }"
-    "th { background-color: #f0f0f0 !important; text-align: center !important; }"
-    "thead th { text-align: center !important; }"
-    "td { text-align: center; }"
-    "</style>"
-    + df_formatted.to_html(index=False, escape=False)
+        "<style>"
+        "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
+        "th, td { padding: 8px 12px; font-weight: bold; border: 1px solid #ddd; }"
+        "th { background-color: #f0f0f0 !important; text-align: center !important; }"
+        "thead th { text-align: center !important; }"
+        "td { text-align: center; }"
+        "</style>"
+        + df_formatted.to_html(index=False, escape=False)
     )
- 
+
     st.markdown(f"### Annual Price & Growth: {selected_benchmark} vs MSFT (2014–2024)")
     st.markdown(styled_html, unsafe_allow_html=True)
 

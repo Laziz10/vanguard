@@ -86,16 +86,16 @@ with st.sidebar:
         st.session_state.selected_benchmark = None
 
     elif view_mode in ["Benchmark Analysis", "Risk Analysis"]:
-    st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
-    selected_benchmark = st.selectbox(
-        label="Benchmark Dropdown",
-        options=benchmark_stocks,
-        index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
-        label_visibility="collapsed",
-        key="benchmark_dropdown"
-    )
-    st.session_state.selected_benchmark = selected_benchmark
-    st.session_state.selected_speaker = "All"
+        st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
+        selected_benchmark = st.selectbox(
+            label="Benchmark Dropdown",
+            options=benchmark_stocks,
+            index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
+            label_visibility="collapsed",
+            key="benchmark_dropdown"
+        )
+        st.session_state.selected_benchmark = selected_benchmark
+        st.session_state.selected_speaker = "All"
     
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)

@@ -127,7 +127,7 @@ def handle_question(vectorstore, llm):
     st.session_state.chat_input = ""
 
 # --- Benchmark Analysis ---
-if selected_benchmark:
+if view_mode == "Benchmark Analysis" and selected_benchmark:
     years = list(range(2015, 2025))
     prices = {
         "MSFT": [40.12, 52.12, 74.22, 101.57, 134.92, 157.70, 222.42, 295.44, 313.85, 375.62],

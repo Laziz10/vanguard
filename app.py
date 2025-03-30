@@ -56,8 +56,6 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "selected_benchmark" not in st.session_state:
     st.session_state.selected_benchmark = None
-if "selected_risk_stock" not in st.session_state:
-    st.session_state.selected_risk_stock = None
 
 speaker_titles = {
     "Brett Iversen": "CVP",
@@ -68,36 +66,13 @@ speaker_titles = {
 speakers = ["All"] + [f"{speaker} ({title})" for speaker, title in speaker_titles.items()]
 benchmark_stocks = ["VGT", "GOOGL", "AAPL", "AMZN"]
 
-stock_risks = {
-    "MSFT": [
-        "Heavy reliance on enterprise and cloud revenue.",
-        "Regulatory scrutiny on software bundling and antitrust issues.",
-        "Geopolitical risks affecting international business."
-    ],
-    "AAPL": [
-        "Supply chain dependence on China.",
-        "Declining iPhone growth and high product concentration.",
-        "Regulatory concerns over App Store policies and privacy."
-    ],
-    "GOOGL": [
-        "Ad revenue slowdown due to market saturation and competition.",
-        "Regulatory and antitrust investigations globally.",
-        "Rising costs from AI infrastructure investments."
-    ],
-    "VGT": [
-        "Heavily concentrated in large-cap tech stocks.",
-        "Highly sensitive to interest rate hikes and macroeconomic factors.",
-        "Vulnerable to sector-wide downturns or regulation."
-    ]
-}
-
 # --- Sidebar ---
 sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bottom:0.25rem;"
 
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
 
-    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Stock Risks"])
+    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis"])
 
     if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
@@ -109,34 +84,19 @@ with st.sidebar:
         )
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
-        st.session_state.selected_risk_stock = None
 
-    elif view_mode == "Benchmark Analysis":
-        st.markdown(f"<div style='{sidebar_header_style}'>Benchmark Analysis</div>", unsafe_allow_html=True)
-        selected_benchmark = st.selectbox(
-            label="Benchmark Dropdown",
-            options=benchmark_stocks,
-            index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
-            label_visibility="collapsed",
-            key="benchmark_dropdown"
-        )
-        st.session_state.selected_benchmark = selected_benchmark
-        st.session_state.selected_speaker = "All"
-        st.session_state.selected_risk_stock = None
-
-    elif view_mode == "Stock Risks":
-        st.markdown(f"<div style='{sidebar_header_style}'>Stock Risks</div>", unsafe_allow_html=True)
-        selected_risk_stock = st.selectbox(
-            label="Select Stock",
-            options=list(stock_risks.keys()),
-            index=0,
-            label_visibility="collapsed",
-            key="risk_dropdown"
-        )
-        st.session_state.selected_risk_stock = selected_risk_stock
-        st.session_state.selected_benchmark = None
-        st.session_state.selected_speaker = "All"
-
+    elif view_mode in ["Benchmark Analysis", "Risk Analysis"]:
+    st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
+    selected_benchmark = st.selectbox(
+        label="Benchmark Dropdown",
+        options=benchmark_stocks,
+        index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
+        label_visibility="collapsed",
+        key="benchmark_dropdown"
+    )
+    st.session_state.selected_benchmark = selected_benchmark
+    st.session_state.selected_speaker = "All"
+    
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
@@ -151,7 +111,6 @@ st.markdown("## **Earnings Call Summarizer**")
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 selected_benchmark = st.session_state.selected_benchmark
-selected_risk_stock = st.session_state.selected_risk_stock
 
 def handle_question(vectorstore, llm):
     user_input = st.session_state.chat_input.strip()
@@ -166,15 +125,6 @@ def handle_question(vectorstore, llm):
     answer = qa_chain.run(user_input)
     st.session_state.chat_history.append({"role": "ai", "content": answer})
     st.session_state.chat_input = ""
-
-# --- Stock Risks ---
-if selected_risk_stock:
-    risks = stock_risks.get(selected_risk_stock, [])
-    st.markdown(f"### Risk Analysis for **{selected_risk_stock}**")
-    st.markdown("<ul style='color:black;'>", unsafe_allow_html=True)
-    for risk in risks:
-        st.markdown(f"<li>{risk}</li>", unsafe_allow_html=True)
-    st.markdown("</ul>", unsafe_allow_html=True)
 
 # --- Benchmark Analysis ---
 if selected_benchmark:
@@ -235,8 +185,49 @@ if selected_benchmark:
     st.markdown("#### Key Insights")
     st.markdown(f"<div style='color:black; font-size:16px'>{insight}</div>", unsafe_allow_html=True)
 
+# --- Risk Analysis ---
+if view_mode == "Risk Analysis" and selected_benchmark:
+    st.markdown(f"### Risk Assessment: {selected_benchmark}")
+
+    risk_insights = {
+        "MSFT": [
+            "Regulatory pressure on cloud and AI services.",
+            "Dependence on enterprise contracts for revenue stability.",
+            "High valuation may limit upside during market corrections."
+        ],
+        "AAPL": [
+            "Heavy reliance on iPhone sales for majority of revenue.",
+            "Supply chain concentration in China.",
+            "Slower innovation cycles in recent years."
+        ],
+        "GOOGL": [
+            "Ad revenue vulnerability to macroeconomic cycles.",
+            "Rising competition in AI and cloud segments.",
+            "Ongoing antitrust scrutiny in U.S. and EU."
+        ],
+        "VGT": [
+            "Broad tech exposure provides diversification.",
+            "Lower company-specific risk than individual stocks.",
+            "Still subject to sector-wide downturns but mitigated by ETF structure."
+        ]
+    }
+
+    st.markdown("#### Identified Risks")
+    for risk in risk_insights[selected_benchmark]:
+        st.markdown(f"- {risk}", unsafe_allow_html=True)
+
+    if selected_benchmark == "VGT":
+        st.markdown("#### Summary")
+        st.markdown(
+            "<div style='color:black; font-size:16px'>"
+            "VGT offers a more balanced risk profile by diversifying across multiple tech leaders, "
+            "reducing exposure to individual company setbacks while still capturing overall sector growth."
+            "</div>", unsafe_allow_html=True
+        )
+
+
 # --- Transcript + Speaker Summary ---
-if uploaded_file and not selected_benchmark and not selected_risk_stock:
+if uploaded_file and not selected_benchmark:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])
@@ -343,4 +334,10 @@ if uploaded_file and not selected_benchmark and not selected_risk_stock:
                             retriever=vectorstore.as_retriever(),
                             chain_type="stuff"
                         )
-                        answer = qa_chain
+                        answer = qa_chain.run(question)
+                        st.session_state.chat_history.append({"role": "ai", "content": answer})
+                        st.rerun()
+            except Exception as e:
+                st.warning(f"Could not generate follow-up questions: {e}")
+        else:
+            st.info("Transcript not available for generating follow-up questions.")

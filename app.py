@@ -72,7 +72,7 @@ sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bo
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
 
-    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis", "Our Recommendations"])
+    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
 
     if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
@@ -225,8 +225,8 @@ if view_mode == "Risk Analysis" and selected_benchmark:
             unsafe_allow_html=True
         )
         
-# --- Our Recommendations ---
-if view_mode == "Our Recommendations":
+# --- Recommendations ---
+if view_mode == "Recommendations":
     
     st.markdown("""
     <ul style='font-size:16px; color:black; padding-left:1rem'>

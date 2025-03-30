@@ -353,9 +353,6 @@ if uploaded_file and not selected_benchmark:
                         answer = qa_chain.run(question)
     
                         st.session_state.chat_history.append({"role": "ai", "content": answer})
-    
-    # Optional: store last asked follow-up
-    st.session_state.last_followup = question  # <-- not required, just for tracking
 
             except Exception as e:
                 st.warning(f"Could not generate follow-up questions: {e}")

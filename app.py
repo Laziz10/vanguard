@@ -85,7 +85,7 @@ with st.sidebar:
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
 
-    elif view_mode in ["Benchmark Analysis", "Risk Analysis"]:
+    if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
         selected_benchmark = st.selectbox(
             label="Benchmark Dropdown",

@@ -72,7 +72,7 @@ sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bo
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
 
-    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis"])
+    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis", "Vanguard Recommendations"])
 
     if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
@@ -224,6 +224,20 @@ if view_mode == "Risk Analysis" and selected_benchmark:
             "</div>",
             unsafe_allow_html=True
         )
+        
+# --- Vanguard Recommendations ---
+if view_mode == "Vanguard Recommendations":
+    st.markdown("### Vanguard's Investing Philosophy")
+    
+    st.markdown("""
+    <ul style='font-size:16px; color:black; padding-left:1rem'>
+        <li><b>Think long-term:</b> Successful investing requires patience and discipline over decades, not months.</li>
+        <li><b>Stay diversified:</b> Broad diversification reduces risk and helps capture market returns.</li>
+        <li><b>Minimize costs:</b> Lower fees mean you keep more of your investment returns.</li>
+        <li><b>Stay the course:</b> Avoid emotional decisions during market swings—stick to your plan.</li>
+        <li><b>Focus on what you can control:</b> Set clear goals, choose the right asset mix, and rebalance as needed.</li>
+    </ul>
+    """, unsafe_allow_html=True)
 
 
 # --- Transcript + Speaker Summary ---

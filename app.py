@@ -225,9 +225,9 @@ if view_mode == "Risk Analysis" and selected_benchmark:
             unsafe_allow_html=True
         )
         
-# --- Recommendations ---
-if view_mode == "Recommendations":
-    
+if view_mode == "Our Recommendations":
+    st.markdown("### Vanguard's Core Investing Principles")
+
     st.markdown("""
     <ul style='font-size:16px; color:black; padding-left:1rem'>
         <li><b>Think long-term:</b> Successful investing requires patience and discipline over decades, not months.</li>
@@ -237,6 +237,7 @@ if view_mode == "Recommendations":
         <li><b>Focus on what you can control:</b> Set clear goals, choose the right asset mix, and rebalance as needed.</li>
     </ul>
     """, unsafe_allow_html=True)
+
 
 
 # --- Transcript + Speaker Summary ---

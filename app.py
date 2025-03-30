@@ -226,16 +226,17 @@ if view_mode == "Risk Analysis" and selected_benchmark:
         )
         
 if view_mode == "Recommendations":
-    
-  st.markdown("""
-<ul style='font-size:16px; color:black; padding-left:1rem; line-height:1.8'>
-    <li><b>Think long-term</b>: Successful investing requires patience and discipline over decades, not months.</li>
-    <li><b>Stay diversified</b>: Broad diversification reduces risk and helps capture market returns.</li>
-    <li><b>Minimize costs</b>: Lower fees mean you keep more of your investment returns.</li>
-    <li><b>Stay the course</b>: Avoid emotional decisions during market swings—stick to your plan.</li>
-    <li><b>Focus on what you can control</b>: Set clear goals, choose the right asset mix, and rebalance as needed.</li>
-</ul>
-""", unsafe_allow_html=True)
+
+    st.markdown("""
+    <ul style='font-size:16px; color:black; padding-left:1rem; line-height:1.8'>
+        <li><span style='font-weight:bold'>Think long-term</span>: Successful investing requires patience and discipline over decades, not months.</li>
+        <li><span style='font-weight:bold'>Stay diversified</span>: Broad diversification reduces risk and helps capture market returns.</li>
+        <li><span style='font-weight:bold'>Minimize costs</span>: Lower fees mean you keep more of your investment returns.</li>
+        <li><span style='font-weight:bold'>Stay the course</span>: Avoid emotional decisions during market swings—stick to your plan.</li>
+        <li><span style='font-weight:bold'>Focus on what you can control</span>: Set clear goals, choose the right asset mix, and rebalance as needed.</li>
+    </ul>
+    """, unsafe_allow_html=True)
+
 
 
 

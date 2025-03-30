@@ -331,7 +331,7 @@ if uploaded_file and not selected_benchmark:
             """, unsafe_allow_html=True)
 
              st.markdown("### Suggested Follow-Up Questions")
-        if raw_text.strip():
+            if raw_text.strip():
             followup_prompt = (
                 f"Based on the following earnings call transcript, suggest 3 insightful follow-up questions "
                 f"that an analyst might ask to better understand the discussion.\n\n"

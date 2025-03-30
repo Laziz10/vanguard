@@ -330,7 +330,7 @@ if uploaded_file and not selected_benchmark:
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("### Suggested Follow-Up Questions")
+             st.markdown("### Suggested Follow-Up Questions")
         if raw_text.strip():
             followup_prompt = (
                 f"Based on the following earnings call transcript, suggest 3 insightful follow-up questions "
@@ -338,28 +338,31 @@ if uploaded_file and not selected_benchmark:
                 f"---\n\n{raw_text[:2000]}\n\n---\n\n"
                 f"List each question on a new line, without numbering."
             )
+
             try:
                 followup_response = llm.predict(followup_prompt)
                 followup_questions = [q.strip("-\u2022 ").strip() for q in followup_response.strip().split("\n") if q.strip()]
+
                 for i, question in enumerate(followup_questions):
-                    button_key = f"followup_q_{i}"
-                    if st.button(question, key=button_key, use_container_width=True):
-                       st.session_state.pending_question = question
+                    if st.button(question, key=f"followup_q_{i}", use_container_width=True):
+                        st.session_state.pending_question = question
 
-            if "pending_question" in st.session_state:
-                question = st.session_state.pending_question
-                st.session_state.chat_history.append({"role": "user", "content": question})
-
-                qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                retriever=vectorstore.as_retriever(),
-                chain_type="stuff"
-                )
-                answer = qa_chain.run(question)
-                st.session_state.chat_history.append({"role": "ai", "content": answer})
-
-    del st.session_state.pending_question  # reset the trigger
             except Exception as e:
                 st.warning(f"Could not generate follow-up questions: {e}")
         else:
             st.info("Transcript not available for generating follow-up questions.")
+
+        # Process pending question if exists
+        if "pending_question" in st.session_state:
+            question = st.session_state.pending_question
+            st.session_state.chat_history.append({"role": "user", "content": question})
+
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                retriever=vectorstore.as_retriever(),
+                chain_type="stuff"
+            )
+            answer = qa_chain.run(question)
+            st.session_state.chat_history.append({"role": "ai", "content": answer})
+
+            del st.session_state.pending_question

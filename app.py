@@ -89,17 +89,40 @@ with st.sidebar:
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
 
-
 if view_mode == "Market Analysis":
     st.markdown("### 📊 Market Analysis")
 
     ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
 
     if ticker:
-        # --- Get stock data ---
-        stock = yf.Ticker(ticker.upper())
-        data = stock.history(period="1d", interval="5m")
-        info = stock.info
+        try:
+            stock = yf.Ticker(ticker.upper())
+            data = stock.history(period="1d", interval="5m")
+            info = stock.info
+
+            if data.empty or not info.get("regularMarketPrice"):
+                st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
+            else:
+                current_price = info.get("regularMarketPrice", "N/A")
+                change = info.get("regularMarketChange", 0)
+                percent = info.get("regularMarketChangePercent", 0)
+
+                st.markdown(f"## **${current_price}** {'🔼' if change > 0 else '🔽'} {change:.2f} ({percent:.2f}%) Today")
+                st.line_chart(data['Close'])
+
+                st.markdown("#### Key Metrics")
+                metrics = {
+                    "Open": info.get("regularMarketOpen"),
+                    "Day Range": f"{info.get('dayLow')} - {info.get('dayHigh')}",
+                    "52 Week Range": f"{info.get('fiftyTwoWeekLow')} - {info.get('fiftyTwoWeekHigh')}",
+                    "Volume": info.get("volume")
+                }
+                for label, value in metrics.items():
+                    st.markdown(f"- **{label}**: {value}")
+
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+
 
         current_price = info.get("regularMarketPrice", "N/A")
         change = info.get("regularMarketChange", 0)

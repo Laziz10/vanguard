@@ -94,11 +94,31 @@ if view_mode == "Market Analysis":
 
     ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
 
+    # Time range selector
+    range_option = st.selectbox(
+        "Select Time Range",
+        options=["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"],
+        index=0
+    )
+
+    # Map to yfinance-compatible periods and intervals
+    range_map = {
+        "1D":  ("1d", "5m"),
+        "5D":  ("5d", "15m"),
+        "1M":  ("1mo", "30m"),
+        "6M":  ("6mo", "1d"),
+        "YTD": ("ytd", "1d"),
+        "1Y":  ("1y", "1d"),
+        "5Y":  ("5y", "1wk"),
+        "MAX": ("max", "1mo")
+    }
+    period, interval = range_map[range_option]
+
     if ticker:
         try:
             stock = yf.Ticker(ticker.upper())
-            data = stock.history(period="1d", interval="5m")
-            info = stock.info  # fallback to old API
+            data = stock.history(period=period, interval=interval)
+            info = stock.info  # fallback to .info since fast_info is unstable or unavailable
 
             if data.empty or "regularMarketPrice" not in info:
                 st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
@@ -114,9 +134,15 @@ if view_mode == "Market Analysis":
                 # Price movement logic
                 price_diff = current_price - open_price
                 percent = (price_diff / open_price) * 100 if open_price else 0
-                arrow = "🔼" if price_diff > 0 else "🔽"
+                arrow = "+" if price_diff > 0 else "-"
+                color = "green" if price_diff > 0 else "red"
 
-                st.markdown(f"## **${current_price:.2f}** {arrow} {price_diff:.2f} ({percent:.2f}%) Today")
+                st.markdown(
+                    f"<h3 style='color:black;'>${current_price:.2f} "
+                    f"<span style='color:{color};'>{arrow}{abs(price_diff):.2f} ({arrow}{abs(percent):.2f}%)</span> Today</h3>",
+                    unsafe_allow_html=True
+                )
+
                 st.line_chart(data['Close'])
 
                 st.markdown("#### Key Metrics")
@@ -142,7 +168,7 @@ if view_mode == "Market Analysis":
                     market_summary_prompt = f"""
 You are a financial analyst assistant. Summarize the current market status of {ticker.upper()} based on the following:
 
-1. **Stock Price & Change**: {current_price} USD ({price_diff:+.2f}, {percent:+.2f}%)
+1. **Stock Price & Change**: {current_price} USD ({arrow}{abs(price_diff):.2f}, {arrow}{abs(percent):.2f}%)
 2. **Key Metrics**:
     - Open: {open_price}
     - Day Range: {low} - {high}
@@ -162,7 +188,7 @@ Provide a short summary (~100 words) on overall market sentiment, short-term mom
                         st.error(f"LLM summarization failed: {e}")
 
         except Exception as e:
-            st.error(f"Error fetching data: {e}")    
+            st.error(f"Error fetching data: {e}")
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

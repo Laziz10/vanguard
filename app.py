@@ -91,6 +91,14 @@ with st.sidebar:
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
 
+        # ✅ PDF Upload widget ONLY for Speaker Analysis and ONLY in sidebar
+        if st.session_state.uploaded_file is None:
+            st.markdown("**Upload Earnings Call PDF**", unsafe_allow_html=True)
+            uploaded = st.file_uploader("", type=["pdf"], key="uploader")
+            if uploaded is not None:
+                st.session_state.uploaded_file = uploaded
+                st.rerun()
+
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
 

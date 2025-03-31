@@ -100,29 +100,33 @@ if view_mode == "Market Analysis":
             data = stock.history(period="1d", interval="5m")
             info = stock.fast_info
 
-            if data.empty or not info.get("regularMarketPrice"):
+            if data.empty or "last_price" not in info:
                 st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
             else:
-                current_price = info.get("regularMarketPrice", "N/A")
-                change = info.get("regularMarketChange", 0)
-                percent = info.get("regularMarketChangePercent", 0)
+                current_price = info["last_price"]
+                open_price = info["open"]
+                high = info["day_high"]
+                low = info["day_low"]
+                volume = info["volume"]
+                year_high = info["year_high"]
+                year_low = info["year_low"]
 
-                st.markdown(f"## **${current_price}** {'🔼' if change > 0 else '🔽'} {change:.2f} ({percent:.2f}%) Today")
+                # Price movement logic
+                price_diff = current_price - open_price
+                percent = (price_diff / open_price) * 100 if open_price else 0
+                arrow = "🔼" if price_diff > 0 else "🔽"
+
+                st.markdown(f"## **${current_price:.2f}** {arrow} {price_diff:.2f} ({percent:.2f}%) Today")
                 st.line_chart(data['Close'])
 
                 st.markdown("#### Key Metrics")
-                metrics = {
-                    "Open": info.get("regularMarketOpen"),
-                    "Day Range": f"{info.get('dayLow')} - {info.get('dayHigh')}",
-                    "52 Week Range": f"{info.get('fiftyTwoWeekLow')} - {info.get('fiftyTwoWeekHigh')}",
-                    "Volume": info.get("volume")
-                }
-                for label, value in metrics.items():
-                    st.markdown(f"- **{label}**: {value}")
+                st.markdown(f"- **Open**: {open_price}")
+                st.markdown(f"- **Day Range**: {low} - {high}")
+                st.markdown(f"- **52 Week Range**: {year_low} - {year_high}")
+                st.markdown(f"- **Volume**: {volume}")
 
         except Exception as e:
             st.error(f"Error fetching data: {e}")
-
 
         current_price = info.get("regularMarketPrice", "N/A")
         change = info.get("regularMarketChange", 0)

@@ -11,6 +11,7 @@ yfinance==0.1.70
 reportlab
 matplotlib
 feedparser
+yfinance>=0.2.4
 
 
 

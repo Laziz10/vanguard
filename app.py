@@ -13,6 +13,8 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
+if "llm" not in locals():
+    llm = ChatOpenAI(temperature=0)
 from langchain.chains import RetrievalQA
 
 import yfinance as yf

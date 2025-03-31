@@ -98,7 +98,7 @@ if view_mode == "Market Analysis":
         try:
             stock = yf.Ticker(ticker.upper())
             data = stock.history(period="1d", interval="5m")
-            info = stock.info
+            info = stock.fast_info
 
             if data.empty or not info.get("regularMarketPrice"):
                 st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")

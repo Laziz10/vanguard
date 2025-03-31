@@ -90,11 +90,10 @@ with st.sidebar:
         st.session_state.selected_benchmark = None
 
 if view_mode == "Market Analysis":
-    st.markdown("### 📊 Market Analysis")
+    st.markdown("### Market Analysis")
 
     ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
 
-    # Default selector first to initialize session state
     if "range_option" not in st.session_state:
         st.session_state.range_option = "1D"
 
@@ -179,7 +178,6 @@ if view_mode == "Market Analysis":
                 st.markdown(f"- **52 Week Range**: {year_low} - {year_high}")
                 st.markdown(f"- **Volume**: {volume}")
 
-                # Pull news headlines
                 st.markdown("#### Latest News Headlines")
                 try:
                     news_feed = feedparser.parse(f"https://news.google.com/rss/search?q={ticker}+stock")
@@ -191,49 +189,44 @@ if view_mode == "Market Analysis":
                     news_summary = "No news available."
                     st.warning(f"News fetch failed: {e}")
 
-                # LLM Summary with 3 sections below chart
                 if "llm" in locals():
-                    market_sections_prompt = f"""
-You are a financial analyst assistant. Based on the following data, generate three sections:
+                    try:
+                        market_summary_prompt = f"""
+As of today, summarize the current market status of {ticker.upper()} using the following context:
 
-1. **Recent Financial Performance** (short paragraph): highlight revenue, earnings trends, and YoY changes if mentioned.
-2. **Analyst Outlook** (short paragraph): summarize price targets, ratings (e.g., Buy/Hold), and growth potential.
-3. **Recent Developments** (3 bullet points): pull from news headlines. Mention AI, regulation, partnerships, market risk, or legal news.
+1. **Stock Price & Movement**:
+    - Price: {current_price}
+    - Day Range: {low} - {high}
+    - 52 Week Range: {year_low} - {year_high}
+    - Volume: {volume}
+    - Open: {open_price}
+    - Price Change: {price_diff:+.2f}, Percent Change: {percent:+.2f}%
 
----
+2. **Recent Financials**:
+    - Revenue (2024): $245.12B (+15.67% YoY)
+    - Earnings (2024): $88.14B (+21.8% YoY)
 
-Company Info:
-- Revenue: $245.12B (2024)
-- Earnings: $88.14B (2024)
-- Analyst Target Price: {info.get('targetMeanPrice', 'N/A')}
-- Analyst Rating: {info.get('recommendationKey', 'N/A')}
-- Summary: {info.get('longBusinessSummary', '')[:1000]}
+3. **Analyst Insights**:
+    - Analyst Target Price: {info.get("targetMeanPrice", "N/A")}
+    - Analyst Rating: {info.get("recommendationKey", "N/A")}
 
-News Headlines:
+4. **News Headlines**:
 {news_summary}
 
----
-Format:
-**Recent Financial Performance:** <text>
-
-**Analyst Outlook:** <text>
-
-**Recent Developments:**
-- <bullet 1>
-- <bullet 2>
-- <bullet 3>
-                    """
-                    try:
-                        sections = llm.predict(market_sections_prompt)
-                        st.markdown("#### Market Commentary")
-                        st.markdown(f"<div style='color:black; font-size:16px'>{sections}</div>", unsafe_allow_html=True)
+Provide a concise, professional ~120-word financial analysis covering:
+- Current sentiment and stock movement
+- Analyst outlook
+- Economic or industry factors
+- Risks or catalysts ahead
+                        """
+                        st.markdown("#### LLM Market Summary")
+                        llm_response = llm.predict(market_summary_prompt)
+                        st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
                     except Exception as e:
-                        st.error(f"LLM summary failed: {e}")
+                        st.error(f"LLM summary generation failed: {e}")
 
         except Exception as e:
             st.error(f"Error fetching data: {e}")
-
-
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

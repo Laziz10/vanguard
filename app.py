@@ -149,27 +149,6 @@ if view_mode == "Market Analysis":
                 with col2:
                     range_option = st.selectbox("", options=range_options, index=range_options.index(range_option), key="range_option", label_visibility="collapsed")
 
-                after_hours = info.get("postMarketPrice")
-                if after_hours:
-                    ah_change = after_hours - current_price
-                    ah_percent = (ah_change / current_price) * 100
-                    ah_arrow = "+" if ah_change > 0 else "-"
-                    ah_color = "green" if ah_change > 0 else "red"
-                    st.markdown(
-                        f"<p style='color:gray;'>After Hours: "
-                        f"<span style='color:{ah_color};'>${after_hours:.2f} ({ah_arrow}{abs(ah_percent):.2f}%)</span></p>",
-                        unsafe_allow_html=True
-                    )
-
-                if range_option == "MAX":
-                    min_price = data['Close'].min()
-                    gain = current_price - min_price
-                    gain_percent = (gain / min_price) * 100 if min_price else 0
-                    st.markdown(
-                        f"<p style='color:green; font-size:18px;'><b>+${gain:.2f} (+{gain_percent:.2f}%)</b> Max</p>",
-                        unsafe_allow_html=True
-                    )
-
                 st.line_chart(data['Close'])
 
                 st.markdown("#### Key Metrics")
@@ -219,18 +198,16 @@ Provide a concise, professional ~120-word financial analysis covering:
 - Economic or industry factors
 - Risks or catalysts ahead
                         """
-                 st.markdown("#### LLM Market Summary")
-try:
-    llm_response = llm.predict(market_summary_prompt)
-    st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
+                        st.markdown("#### LLM Market Summary")
+                        llm_response = llm.predict(market_summary_prompt)
+                        st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
-    # Chatbot: Ask about the stock
-    st.markdown("#### 💬 Ask a Question About This Stock")
-    question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
-
-    if question:
-        try:
-            chatbot_prompt = f"""
+                        # Chatbot
+                        st.markdown("#### \U0001F4AC Ask a Question About This Stock")
+                        question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
+                        if question:
+                            try:
+                                chatbot_prompt = f"""
 You are a helpful financial assistant. Answer the following question using the information below about {ticker.upper()}:
 
 Company Info:
@@ -249,15 +226,15 @@ Recent News:
 User Question: {question}
 
 Answer:
-            """
-            chatbot_response = llm.predict(chatbot_prompt)
-            st.markdown(f"<div style='color:black; font-size:16px'>{chatbot_response}</div>", unsafe_allow_html=True)
+                                """
+                                chatbot_response = llm.predict(chatbot_prompt)
+                                st.markdown(f"<div style='color:black; font-size:16px'>{chatbot_response}</div>", unsafe_allow_html=True)
+                            except Exception as e:
+                                st.error(f"Chatbot failed to generate response: {e}")
+                    except Exception as e:
+                        st.error(f"LLM summary generation failed: {e}")
         except Exception as e:
-            st.error(f"Chatbot failed to generate response: {e}")
-
-except Exception as e:
-    st.error(f"LLM summary generation failed: {e}")
-
+            st.error(f"Error fetching data: {e}")
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

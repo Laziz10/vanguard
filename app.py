@@ -24,7 +24,11 @@ import feedparser
 # Show Vanguard logo at the top across all views
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 st.image("vanguard_logo.png", width=180)
-st.markdown("<div style='margin-bottom: 1rem'></div>", unsafe_allow_html=True)
+st.markdown("""
+    <div style='padding-top: 1rem; padding-bottom: 1rem;'>
+        <img src='vanguard_logo.png' width='180'>
+    </div>
+""", unsafe_allow_html=True)
 
 # --- Global Styling ---
 st.markdown("""

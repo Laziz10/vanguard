@@ -118,11 +118,12 @@ if view_mode == "Market Analysis":
         try:
             stock = yf.Ticker(ticker.upper())
             data = stock.history(period=period, interval=interval)
-            info = stock.info  # fallback to .info since fast_info is unstable or unavailable
+            info = stock.info
 
             if data.empty or "regularMarketPrice" not in info:
                 st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
             else:
+                company_name = info.get("longName", ticker.upper())
                 current_price = info.get("regularMarketPrice")
                 open_price = info.get("regularMarketOpen")
                 high = info.get("dayHigh")
@@ -131,17 +132,31 @@ if view_mode == "Market Analysis":
                 year_high = info.get("fiftyTwoWeekHigh")
                 year_low = info.get("fiftyTwoWeekLow")
 
-                # Price movement logic
                 price_diff = current_price - open_price
                 percent = (price_diff / open_price) * 100 if open_price else 0
                 arrow = "+" if price_diff > 0 else "-"
                 color = "green" if price_diff > 0 else "red"
 
+                st.markdown(f"### **{company_name} ({ticker.upper()})**")
                 st.markdown(
-                    f"<h3 style='color:black;'>${current_price:.2f} "
-                    f"<span style='color:{color};'>{arrow}{abs(price_diff):.2f} ({arrow}{abs(percent):.2f}%)</span> Today</h3>",
+                    f"<h1 style='color:black;'>${current_price:.2f} "
+                    f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
+                    f"({arrow}{abs(percent):.2f}%)</span> Today</h1>",
                     unsafe_allow_html=True
                 )
+
+                # After Hours
+                after_hours = info.get("postMarketPrice")
+                if after_hours:
+                    ah_change = after_hours - current_price
+                    ah_percent = (ah_change / current_price) * 100
+                    ah_arrow = "+" if ah_change > 0 else "-"
+                    ah_color = "green" if ah_change > 0 else "red"
+                    st.markdown(
+                        f"<p style='color:gray;'>After Hours: "
+                        f"<span style='color:{ah_color};'>${after_hours:.2f} ({ah_arrow}{abs(ah_percent):.2f}%)</span></p>",
+                        unsafe_allow_html=True
+                    )
 
                 st.line_chart(data['Close'])
 

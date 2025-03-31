@@ -90,16 +90,15 @@ with st.sidebar:
         st.session_state.selected_benchmark = None
 
 if view_mode == "Market Analysis":
-    st.markdown("### 📊 Market Analysis")
+    st.markdown("### Market Analysis")
 
     ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
 
-    range_option = st.selectbox(
-        "Select Time Range",
-        options=["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"],
-        index=0,
-        key="range_selector"
-    )
+    # Default selector first to initialize session state
+    if "range_option" not in st.session_state:
+        st.session_state.range_option = "1D"
+
+    range_options = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"]
 
     range_map = {
         "1D":  ("1d", "5m"),
@@ -111,6 +110,8 @@ if view_mode == "Market Analysis":
         "5Y":  ("5y", "1wk"),
         "MAX": ("max", "1mo")
     }
+
+    range_option = st.session_state.range_option
     period, interval = range_map[range_option]
 
     if ticker:
@@ -138,15 +139,16 @@ if view_mode == "Market Analysis":
 
                 st.markdown(f"### **{company_name} ({ticker.upper()})**")
 
-                st.markdown(
-                    f"<div style='display:flex; justify-content:space-between; align-items:center;'>"
-                    f"<h1 style='color:black;'>${current_price:.2f} "
-                    f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
-                    f"({arrow}{abs(percent):.2f}%)</span></h1>"
-                    f"<div style='margin-left:auto;'><b>Time Range:</b> {range_option}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.markdown(
+                        f"<h1 style='color:black;'>${current_price:.2f} "
+                        f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
+                        f"({arrow}{abs(percent):.2f}%)</span></h1>",
+                        unsafe_allow_html=True
+                    )
+                with col2:
+                    range_option = st.selectbox("", options=range_options, index=range_options.index(range_option), key="range_option", label_visibility="collapsed")
 
                 after_hours = info.get("postMarketPrice")
                 if after_hours:
@@ -160,7 +162,6 @@ if view_mode == "Market Analysis":
                         unsafe_allow_html=True
                     )
 
-                # --- Show max gain if viewing MAX chart ---
                 if range_option == "MAX":
                     min_price = data['Close'].min()
                     gain = current_price - min_price
@@ -214,7 +215,6 @@ Provide a short summary (~100 words) on overall market sentiment, short-term mom
 
         except Exception as e:
             st.error(f"Error fetching data: {e}")
-
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

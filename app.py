@@ -234,6 +234,7 @@ Format:
             st.error(f"Error fetching data: {e}")
 
 
+
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
         selected_benchmark = st.selectbox(

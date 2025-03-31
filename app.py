@@ -21,7 +21,9 @@ import yfinance as yf
 import datetime
 import feedparser
 
+# Show Vanguard logo at the top across all views
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
+st.image("vanguard_logo.png", width=180)
 
 # --- Global Styling ---
 st.markdown("""
@@ -265,8 +267,6 @@ Answer:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# --- Main Header ---
-st.image("vanguard_logo.png", width=180)  
 
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker

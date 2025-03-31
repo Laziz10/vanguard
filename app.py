@@ -394,119 +394,98 @@ if view_mode == "Recommendations":
 
 
 
-# --- Transcript + Speaker Summary (Only in Speaker Analysis) ---
-if view_mode == "Speaker Analysis":
+# --- Transcript + Speaker Summary ---
+if uploaded_file and not selected_benchmark:
+    pdf_bytes = BytesIO(uploaded_file.getvalue())
+    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+        raw_text = "".join([page.get_text() for page in doc])
 
-    uploaded_file = st.session_state.uploaded_file
+    if selected_speaker != "All":
+        speaker_name_for_matching = selected_speaker.split(" (")[0]
+        pattern = re.compile(
+            rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
+            re.DOTALL | re.IGNORECASE
+        )
+        matches = pattern.findall(raw_text)
+        raw_text = "\n".join(matches).strip() if matches else ""
+        if not matches:
+            st.warning(f"No speech found for {selected_speaker}. Displaying empty result.")
 
-    # Upload earnings call PDF
-    if uploaded_file is None:
-        st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-        uploaded = st.file_uploader("", type=["pdf"], key="uploader")
-        if uploaded is not None:
-            st.session_state.uploaded_file = uploaded
-            st.rerun()
-
+    if not raw_text.strip():
+        st.warning("No transcript text available for summarization.")
     else:
-        st.image("vanguard_logo.png", width=180)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
+        chunks = splitter.create_documents([raw_text])
 
-        selected_speaker = st.session_state.selected_speaker
+        try:
+            embeddings = OpenAIEmbeddings()
+            vectorstore = FAISS.from_documents(chunks, embeddings)
+            llm = ChatOpenAI(temperature=0)
 
-        # Extract transcript
-        pdf_bytes = BytesIO(uploaded_file.getvalue())
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            raw_text = "".join([page.get_text() for page in doc])
-
-        # Filter by speaker if selected
-        if selected_speaker != "All":
-            speaker_name_for_matching = selected_speaker.split(" (")[0]
-            pattern = re.compile(
-                rf"{re.escape(speaker_name_for_matching)}\s*:\s*(.*?)(?=\n[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\s*\n|$)",
-                re.DOTALL | re.IGNORECASE
+            summary_prompt = (
+                "Summarize the earnings call into four main sections:\n"
+                "1. Key financial highlights\n"
+                "2. Risks and concerns\n"
+                "3. Opportunities or forward-looking statements\n"
+                "4. General sentiment\n"
+                "Format each as a section title followed by 1–2 bullet points."
             )
-            matches = pattern.findall(raw_text)
-            raw_text = "\n".join(matches).strip() if matches else ""
-            if not matches:
-                st.warning(f"No speech found for {selected_speaker}. Displaying empty result.")
+            response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
 
-        if not raw_text.strip():
-            st.warning("No transcript text available for summarization.")
-        else:
-            splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
-            chunks = splitter.create_documents([raw_text])
+            lines = [
+                line.strip() for line in response.split("\n")
+                if line.strip()
+                and not line.lower().startswith("transcript of")
+                and "sec filings" not in line.lower()
+                and "risks and uncertainties" not in line.lower()
+            ]
 
-            try:
-                embeddings = OpenAIEmbeddings()
-                vectorstore = FAISS.from_documents(chunks, embeddings)
-                llm = ChatOpenAI(temperature=0)
+            section_titles = [
+                "Key financial highlights",
+                "Risks and concerns",
+                "Opportunities or forward-looking statements",
+                "General sentiment"
+            ]
 
-                # Summary
-                summary_prompt = (
-                    "Summarize the earnings call into four main sections:\n"
-                    "1. Key financial highlights\n"
-                    "2. Risks and concerns\n"
-                    "3. Opportunities or forward-looking statements\n"
-                    "4. General sentiment\n"
-                    "Format each as a section title followed by 1–2 bullet points."
-                )
-                response = llm.predict(summary_prompt + "\n\n" + raw_text[:3000])
+            styled_summary, bullet_group = "", ""
+            for line in lines:
+                normalized_line = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
+                if any(normalized_line.lower().startswith(title.lower()) for title in section_titles):
+                    if bullet_group:
+                        styled_summary += f"<ul>{bullet_group}</ul>"
+                        bullet_group = ""
+                    styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{normalized_line}:</p>"
+                else:
+                    clean_line = re.sub(r"^[-\u2022\s]+", "", line)
+                    bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
 
-                # Clean formatting
-                lines = [
-                    line.strip() for line in response.split("\n")
-                    if line.strip()
-                    and not line.lower().startswith("transcript of")
-                    and "sec filings" not in line.lower()
-                    and "risks and uncertainties" not in line.lower()
-                ]
+            if bullet_group:
+                styled_summary += f"<ul>{bullet_group}</ul>"
 
-                section_titles = [
-                    "Key financial highlights",
-                    "Risks and concerns",
-                    "Opportunities or forward-looking statements",
-                    "General sentiment"
-                ]
+            st.markdown("### Summary", unsafe_allow_html=True)
+            st.markdown(styled_summary, unsafe_allow_html=True)
 
-                styled_summary, bullet_group = "", ""
-                for line in lines:
-                    normalized_line = re.sub(r"^\d+\.\s*", "", line).rstrip(":").strip()
-                    if any(normalized_line.lower().startswith(title.lower()) for title in section_titles):
-                        if bullet_group:
-                            styled_summary += f"<ul>{bullet_group}</ul>"
-                            bullet_group = ""
-                        styled_summary += f"<p style='color:black; font-weight:bold; font-size:16px'>{normalized_line}:</p>"
-                    else:
-                        clean_line = re.sub(r"^[-\u2022\s]+", "", line)
-                        bullet_group += f"<li><span style='color:black;'>{clean_line}</span></li>"
+        except Exception as e:
+            st.error(f"Vectorstore creation failed: {e}")
 
-                if bullet_group:
-                    styled_summary += f"<ul>{bullet_group}</ul>"
+        st.markdown("### Ask a Question")
+        st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
 
-                st.markdown("### Summary", unsafe_allow_html=True)
-                st.markdown(styled_summary, unsafe_allow_html=True)
+        for pair in reversed([
+            {"question": q["content"], "answer": a["content"]}
+            for q, a in zip(st.session_state.chat_history[::2], st.session_state.chat_history[1::2])
+            if q["role"] == "user" and a["role"] == "ai"
+        ]):
+            st.markdown(f"""
+            <div style="display: flex; gap: 2rem; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="flex: 1; color: black; font-weight: bold;">Q: {pair['question']}</div>
+                <div style="flex: 2; color: black; font-weight: bold;">A: {pair['answer']}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            except Exception as e:
-                st.error(f"Vectorstore creation failed: {e}")
+        st.markdown("### Suggested Follow-Up Questions")
 
-            # Q&A Section
-            st.markdown("### Ask a Question")
-            st.text_input("", key="chat_input", on_change=lambda: handle_question(vectorstore, llm))
-
-            for pair in reversed([
-                {"question": q["content"], "answer": a["content"]}
-                for q, a in zip(st.session_state.chat_history[::2], st.session_state.chat_history[1::2])
-                if q["role"] == "user" and a["role"] == "ai"
-            ]):
-                st.markdown(f"""
-                <div style="display: flex; gap: 2rem; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                    <div style="flex: 1; color: black; font-weight: bold;">Q: {pair['question']}</div>
-                    <div style="flex: 2; color: black; font-weight: bold;">A: {pair['answer']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Follow-Up Questions
-            st.markdown("### Suggested Follow-Up Questions")
-
+        if raw_text.strip():
             followup_prompt = (
                 f"Based on the following earnings call transcript, suggest 3 insightful follow-up questions "
                 f"that an analyst might ask to better understand the discussion.\n\n"
@@ -517,23 +496,27 @@ if view_mode == "Speaker Analysis":
             try:
                 followup_response = llm.predict(followup_prompt)
                 followup_questions = [q.strip("-\u2022 ").strip() for q in followup_response.strip().split("\n") if q.strip()]
+
                 for i, question in enumerate(followup_questions):
                     if st.button(question, key=f"followup_q_{i}", use_container_width=True):
                         st.session_state.pending_question = question
+
             except Exception as e:
                 st.warning(f"Could not generate follow-up questions: {e}")
+        else:
+            st.info("Transcript not available for generating follow-up questions.")
 
-            # Auto-process follow-up question if selected
-            if "pending_question" in st.session_state:
-                question = st.session_state.pending_question
-                st.session_state.chat_history.append({"role": "user", "content": question})
+        # Process pending question if exists
+        if "pending_question" in st.session_state:
+            question = st.session_state.pending_question
+            st.session_state.chat_history.append({"role": "user", "content": question})
 
-                qa_chain = RetrievalQA.from_chain_type(
-                    llm=llm,
-                    retriever=vectorstore.as_retriever(),
-                    chain_type="stuff"
-                )
-                answer = qa_chain.run(question)
-                st.session_state.chat_history.append({"role": "ai", "content": answer})
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                retriever=vectorstore.as_retriever(),
+                chain_type="stuff"
+            )
+            answer = qa_chain.run(question)
+            st.session_state.chat_history.append({"role": "ai", "content": answer})
 
-                del st.session_state.pending_question
+            del st.session_state.pending_question

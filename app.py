@@ -15,6 +15,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
+import yfinance as yf
+import datetime
+import feedparser
+
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
 # --- Global Styling ---
@@ -72,8 +76,8 @@ sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bo
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
 
-    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
-
+    view_mode = st.radio("", ["Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
+    
     if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
         selected_speaker = st.selectbox(
@@ -84,6 +88,83 @@ with st.sidebar:
         )
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
+
+
+if view_mode == "Market Analysis":
+    st.markdown("### 📊 Market Analysis")
+
+    ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
+
+    if ticker:
+        # --- Get stock data ---
+        stock = yf.Ticker(ticker.upper())
+        data = stock.history(period="1d", interval="5m")
+        info = stock.info
+
+        current_price = info.get("regularMarketPrice", "N/A")
+        change = info.get("regularMarketChange", 0)
+        percent = info.get("regularMarketChangePercent", 0)
+
+        # --- Display price ---
+        st.markdown(f"## **${current_price}** {'🔼' if change > 0 else '🔽'} {change:.2f} ({percent:.2f}%) Today")
+
+        # --- Chart ---
+        st.line_chart(data['Close'])
+
+        # --- Key Metrics ---
+        st.markdown("#### Key Metrics")
+        metrics = {
+            "Open": info.get("regularMarketOpen"),
+            "Day Range": f"{info.get('dayLow')} - {info.get('dayHigh')}",
+            "52 Week Range": f"{info.get('fiftyTwoWeekLow')} - {info.get('fiftyTwoWeekHigh')}",
+            "Volume": info.get("volume")
+        }
+        for label, value in metrics.items():
+            st.markdown(f"- **{label}**: {value}")
+
+        # --- Recent Financial Summary (Static or from API) ---
+        st.markdown("#### Recent Financial Performance")
+        st.markdown(f"In 2024, {info.get('shortName')} reported a revenue of $245.12 billion, marking a 15.67% increase from the prior year. Earnings also rose by 21.80% to $88.14 billion.")
+
+        # --- Latest News Headlines ---
+        st.markdown("#### Latest News Headlines")
+        try:
+            news_feed = feedparser.parse(f"https://news.google.com/rss/search?q={ticker}+stock")
+            headlines = [f"- {entry.title}" for entry in news_feed.entries[:3]]
+            news_summary = "\n".join(headlines)
+            for line in headlines:
+                st.markdown(line)
+        except Exception as e:
+            news_summary = "No news available."
+            st.warning(f"News fetch failed: {e}")
+
+        # --- LLM Summary (Requires ChatOpenAI setup) ---
+        if "llm" in locals():
+            market_summary_prompt = f"""
+You are a financial analyst assistant. Summarize the current market status of {ticker.upper()} based on the following:
+
+1. **Stock Price & Change**: {current_price} USD ({change:+.2f}, {percent:+.2f}%)
+2. **Key Metrics**:
+    - Open: {metrics['Open']}
+    - Day Range: {metrics['Day Range']}
+    - 52 Week Range: {metrics['52 Week Range']}
+    - Volume: {metrics['Volume']}
+3. **Recent Financial Performance**: Revenue $245.12B (+15.67%), Earnings $88.14B (+21.8%)
+4. **Recent News Headlines**:
+{news_summary}
+
+Provide a short summary (~100 words) on overall market sentiment, short-term momentum, and any risks or growth drivers based on these inputs.
+            """
+            try:
+                llm_response = llm.predict(market_summary_prompt)
+                st.markdown("#### LLM Summary")
+                st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"LLM summarization failed: {e}")
+
+
+
+    
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

@@ -128,10 +128,6 @@ if view_mode == "Market Analysis":
         except Exception as e:
             st.error(f"Error fetching data: {e}")
 
-        current_price = info.get("regularMarketPrice", "N/A")
-        change = info.get("regularMarketChange", 0)
-        percent = info.get("regularMarketChangePercent", 0)
-
         # --- Display price ---
         st.markdown(f"## **${current_price}** {'🔼' if change > 0 else '🔽'} {change:.2f} ({percent:.2f}%) Today")
 

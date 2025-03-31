@@ -94,14 +94,13 @@ if view_mode == "Market Analysis":
 
     ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
 
-    # Time range selector
     range_option = st.selectbox(
         "Select Time Range",
         options=["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"],
-        index=0
+        index=0,
+        key="range_selector"
     )
 
-    # Map to yfinance-compatible periods and intervals
     range_map = {
         "1D":  ("1d", "5m"),
         "5D":  ("5d", "15m"),
@@ -138,14 +137,17 @@ if view_mode == "Market Analysis":
                 color = "green" if price_diff > 0 else "red"
 
                 st.markdown(f"### **{company_name} ({ticker.upper()})**")
+
                 st.markdown(
+                    f"<div style='display:flex; justify-content:space-between; align-items:center;'>"
                     f"<h1 style='color:black;'>${current_price:.2f} "
                     f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
-                    f"({arrow}{abs(percent):.2f}%)</span> Today</h1>",
+                    f"({arrow}{abs(percent):.2f}%)</span></h1>"
+                    f"<div style='margin-left:auto;'><b>Time Range:</b> {range_option}</div>"
+                    f"</div>",
                     unsafe_allow_html=True
                 )
 
-                # After Hours
                 after_hours = info.get("postMarketPrice")
                 if after_hours:
                     ah_change = after_hours - current_price
@@ -158,6 +160,16 @@ if view_mode == "Market Analysis":
                         unsafe_allow_html=True
                     )
 
+                # --- Show max gain if viewing MAX chart ---
+                if range_option == "MAX":
+                    min_price = data['Close'].min()
+                    gain = current_price - min_price
+                    gain_percent = (gain / min_price) * 100 if min_price else 0
+                    st.markdown(
+                        f"<p style='color:green; font-size:18px;'><b>+${gain:.2f} (+{gain_percent:.2f}%)</b> Max</p>",
+                        unsafe_allow_html=True
+                    )
+
                 st.line_chart(data['Close'])
 
                 st.markdown("#### Key Metrics")
@@ -166,7 +178,6 @@ if view_mode == "Market Analysis":
                 st.markdown(f"- **52 Week Range**: {year_low} - {year_high}")
                 st.markdown(f"- **Volume**: {volume}")
 
-                # --- Latest News Headlines ---
                 st.markdown("#### Latest News Headlines")
                 try:
                     news_feed = feedparser.parse(f"https://news.google.com/rss/search?q={ticker}+stock")
@@ -178,7 +189,6 @@ if view_mode == "Market Analysis":
                     news_summary = "No news available."
                     st.warning(f"News fetch failed: {e}")
 
-                # --- LLM Summary ---
                 if "llm" in locals():
                     market_summary_prompt = f"""
 You are a financial analyst assistant. Summarize the current market status of {ticker.upper()} based on the following:
@@ -204,6 +214,7 @@ Provide a short summary (~100 words) on overall market sentiment, short-term mom
 
         except Exception as e:
             st.error(f"Error fetching data: {e}")
+
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

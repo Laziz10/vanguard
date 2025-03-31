@@ -219,14 +219,45 @@ Provide a concise, professional ~120-word financial analysis covering:
 - Economic or industry factors
 - Risks or catalysts ahead
                         """
-                        st.markdown("#### LLM Market Summary")
-                        llm_response = llm.predict(market_summary_prompt)
-                        st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
-                    except Exception as e:
-                        st.error(f"LLM summary generation failed: {e}")
+                 st.markdown("#### LLM Market Summary")
+try:
+    llm_response = llm.predict(market_summary_prompt)
+    st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
+    # Chatbot: Ask about the stock
+    st.markdown("#### 💬 Ask a Question About This Stock")
+    question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
+
+    if question:
+        try:
+            chatbot_prompt = f"""
+You are a helpful financial assistant. Answer the following question using the information below about {ticker.upper()}:
+
+Company Info:
+- Name: {company_name}
+- Current Price: ${current_price}
+- Day Range: {low} - {high}
+- 52 Week Range: {year_low} - {year_high}
+- Volume: {volume}
+- Analyst Target Price: {info.get('targetMeanPrice', 'N/A')}
+- Analyst Rating: {info.get('recommendationKey', 'N/A')}
+- Summary: {info.get('longBusinessSummary', '')[:800]}
+
+Recent News:
+{news_summary}
+
+User Question: {question}
+
+Answer:
+            """
+            chatbot_response = llm.predict(chatbot_prompt)
+            st.markdown(f"<div style='color:black; font-size:16px'>{chatbot_response}</div>", unsafe_allow_html=True)
         except Exception as e:
-            st.error(f"Error fetching data: {e}")
+            st.error(f"Chatbot failed to generate response: {e}")
+
+except Exception as e:
+    st.error(f"LLM summary generation failed: {e}")
+
 
     if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
         st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)

@@ -528,13 +528,13 @@ if view_mode == "Digital Advisor":
             current_price = info.get("regularMarketPrice")
             pe_ratio = info.get("trailingPE")
 
-        if current_price is None:
-            return f"Unable to retrieve the stock price for {ticker} today."
+            if current_price is None:
+                return f"Unable to retrieve the stock price for {ticker} today."
 
-        return f"{ticker} - Current Price: ${current_price:.2f}, P/E Ratio: {pe_ratio if pe_ratio else 'N/A'}"
+            return f"{ticker} - Current Price: ${current_price:.2f}, P/E Ratio: {pe_ratio if pe_ratio else 'N/A'}"
 
-    except Exception as e:
-        return f"Failed to fetch metrics for {input}: {e}"
+        except Exception as e:
+            return f"Failed to fetch metrics for {input}: {e}"
 
 
     from langchain.agents import Tool, initialize_agent

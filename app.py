@@ -92,9 +92,8 @@ with st.sidebar:
 
     # View selection
     view_mode = st.radio("", [
-    "Speaker Analysis", "Market Analysis", "Digital Advisor", "Benchmark Analysis", "Risk Analysis", "Recommendations"
+        "Speaker Analysis", "Market Analysis", "Digital Advisor", "Benchmark Analysis", "Risk Analysis", "Recommendations"
     ])
-
 
     # SPEAKER ANALYSIS
     if view_mode == "Speaker Analysis":
@@ -107,6 +106,17 @@ with st.sidebar:
         )
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
+
+        # PDF uploader for Speaker Analysis
+        st.markdown("### Upload Transcript for Speaker View")
+        speaker_file = st.file_uploader(
+            "Upload a single PDF transcript",
+            type=["pdf"],
+            accept_multiple_files=False,
+            key="speaker_pdf"
+        )
+        if speaker_file:
+            st.session_state.uploaded_file = speaker_file
 
     # BENCHMARK / RISK ANALYSIS
     elif view_mode in ["Benchmark Analysis", "Risk Analysis"]:
@@ -122,32 +132,23 @@ with st.sidebar:
         st.session_state.selected_benchmark = selected_benchmark
         st.session_state.selected_speaker = "All"
 
-    # MARKET ANALYSIS & RECOMMENDATIONS → Clear everything else
+    # DIGITAL ADVISOR
+    elif view_mode == "Digital Advisor":
+        st.markdown("### Upload Earnings Calls")
+        uploaded_files = st.file_uploader(
+            "Upload 1 or 2 PDF transcripts",
+            type=["pdf"],
+            accept_multiple_files=True,
+            key="advisor_pdfs"
+        )
+        if uploaded_files:
+            st.session_state.uploaded_files = uploaded_files
+
+    # MARKET ANALYSIS & RECOMMENDATIONS
     else:
         st.session_state.selected_speaker = "All"
         st.session_state.selected_benchmark = None
 
-if view_mode == "Speaker Analysis":
-    st.markdown("### Upload Transcript for Speaker View")
-    speaker_file = st.file_uploader(
-        "Upload a single PDF transcript",
-        type=["pdf"],
-        accept_multiple_files=False,
-        key="speaker_pdf"
-    )
-    if speaker_file:
-        st.session_state.uploaded_file = speaker_file
-    
-if view_mode == "Digital Advisor":
-    st.markdown("### Upload Earnings Calls")
-    uploaded_files = st.file_uploader(
-        "Upload 1 or 2 PDF transcripts",
-        type=["pdf"],
-        accept_multiple_files=True,
-        key="advisor_pdfs"
-    )
-    if uploaded_files:
-        st.session_state.uploaded_files = uploaded_files
 
 # --- Main Header ---
 st.image("vanguard_logo.png", width=180)  

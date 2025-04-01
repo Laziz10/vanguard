@@ -535,7 +535,7 @@ if view_mode == "Digital Advisor":
     user_query = st.text_input("Ask your question:", key="advisor_query")
 
     if user_query:
-        with st.spinner("Thinking like a digital analyst..."):
+        with st.spinner("Thinking like a Digital Advisor..."):
             try:
                 result = digital_agent.run(user_query)
                 st.markdown(f"### Advisor Response\n{result}")

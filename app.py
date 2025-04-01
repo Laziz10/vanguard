@@ -462,6 +462,11 @@ Provide a concise, professional ~120-word financial analysis covering:
             st.error(f"Error fetching data: {e}")
 
 # --- Digital Advisor View with LangChain Agent ---
+from langchain.memory import ConversationBufferMemory
+
+# Create memory object (stores full chat history)
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
 if view_mode == "Digital Advisor":
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
@@ -637,26 +642,36 @@ Write a concise comparison.
     from langchain.agents import initialize_agent, AgentType
 
     digital_agent = initialize_agent(
-        tools=tools,
-        llm=ChatOpenAI(temperature=0),
-        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        verbose=False,
-        handle_parsing_errors=True  # ✅ Add this line
-    )
+    tools=tools,
+    llm=ChatOpenAI(temperature=0),
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=False,
+    handle_parsing_errors=True,
+    memory=memory  # Inject memory here
+)
 
-    # --- User Query ---
-    user_query = st.text_input("", key="advisor_query")
+with st.expander("Conversation History"):
+    for msg in memory.chat_memory.messages:
+        role = msg.type.capitalize()
+        st.markdown(f"**{role}:** {msg.content}")
+
+if st.button("Clear Advisor Memory"):
+    memory.clear()
+    st.success("Conversation memory cleared.")
+
+# --- User Query ---
+user_query = st.text_input("", key="advisor_query")
 
 
-    if user_query:
-        with st.spinner("Thinking like a Digital Advisor..."):
-            try:
-                st_callback = StreamlitCallbackHandler(st.container())  # this adds the live steps output
-                result = digital_agent.run(user_query, callbacks=[st_callback])
-                st.markdown("### Digital Advisor Response")
-                st.markdown(result)
-            except Exception as e:
-                st.error(f"Agent failed: {e}")
+if user_query:
+    with st.spinner("Thinking like a Digital Advisor..."):
+        try:
+            st_callback = StreamlitCallbackHandler(st.container())  # this adds the live steps output
+            result = digital_agent.run(user_query, callbacks=[st_callback])
+            st.markdown("### Digital Advisor Response")
+            st.markdown(result)
+        except Exception as e:
+            st.error(f"Agent failed: {e}")
 
 # --- Benchmark Analysis ---
 if view_mode == "Benchmark Analysis" and selected_benchmark:

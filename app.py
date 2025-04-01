@@ -135,6 +135,7 @@ with st.sidebar:
     # DIGITAL ADVISOR
     elif view_mode == "Digital Advisor":
         uploaded_files = st.file_uploader(
+            "Upload 1 or 2 PDF transcripts",
             type=["pdf"],
             accept_multiple_files=True,
             key="advisor_pdfs"

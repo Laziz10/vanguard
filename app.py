@@ -138,16 +138,16 @@ if view_mode == "Speaker Analysis":
     if speaker_file:
         st.session_state.uploaded_file = speaker_file
     
-    if view_mode == "Digital Advisor":
-        st.markdown("### Upload Earnings Calls")
-        uploaded_files = st.file_uploader(
-            "Upload 1 or 2 PDF transcripts",
-            type=["pdf"],
-            accept_multiple_files=True,
-            key="advisor_pdfs"
-        )
-        if uploaded_files:
-            st.session_state.uploaded_files = uploaded_files
+if view_mode == "Digital Advisor":
+   st.markdown("### Upload Earnings Calls")
+   uploaded_files = st.file_uploader(
+        "Upload 1 or 2 PDF transcripts",
+         type=["pdf"],
+         accept_multiple_files=True,
+         key="advisor_pdfs"
+    )
+    if uploaded_files:
+       st.session_state.uploaded_files = uploaded_files
 
 # --- Main Header ---
 st.image("vanguard_logo.png", width=180)  

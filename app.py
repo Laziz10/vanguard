@@ -458,7 +458,6 @@ Provide a concise, professional ~120-word financial analysis covering:
 
 # --- Digital Advisor View with LangChain Agent ---
 if view_mode == "Digital Advisor":
-    st.markdown("## 🤖 Vanguard Digital Advisor")
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
     import yfinance as yf
@@ -582,7 +581,7 @@ if view_mode == "Digital Advisor":
     )
 
     # --- User Query ---
-    user_query = st.text_input("Ask your question:", key="advisor_query")
+    user_query = st.text_input("", key="advisor_query")
 
     if user_query:
         with st.spinner("Thinking like a digital analyst..."):

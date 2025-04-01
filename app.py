@@ -127,6 +127,17 @@ with st.sidebar:
         st.session_state.selected_speaker = "All"
         st.session_state.selected_benchmark = None
 
+if view_mode == "Speaker Analysis":
+    st.markdown("### Upload Transcript for Speaker View")
+    speaker_file = st.file_uploader(
+        "Upload a single PDF transcript",
+        type=["pdf"],
+        accept_multiple_files=False,
+        key="speaker_pdf"
+    )
+    if speaker_file:
+        st.session_state.uploaded_file = speaker_file
+    
     if view_mode == "Digital Advisor":
         st.markdown("### Upload Earnings Calls")
         uploaded_files = st.file_uploader(

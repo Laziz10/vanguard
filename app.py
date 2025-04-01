@@ -276,6 +276,7 @@ if view_mode == "Speaker Analysis" and uploaded_file:
 
 # --- Market Analysis ---
 
+# --- Market Analysis ---
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
 
@@ -285,7 +286,6 @@ if view_mode == "Market Analysis":
         st.session_state.range_option = "1D"
 
     range_options = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"]
-
     range_map = {
         "1D":  ("1d", "5m"),
         "5D":  ("5d", "15m"),
@@ -309,6 +309,17 @@ if view_mode == "Market Analysis":
             if data.empty or "regularMarketPrice" not in info:
                 st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
             else:
+                # 🧠 Pull real financials
+                def format_billions(num):
+                    if not num or num == "N/A":
+                        return "N/A"
+                    return f"${round(num / 1e9, 2)}B"
+
+                revenue_2024 = format_billions(info.get("totalRevenue", None))
+                earnings_2024 = format_billions(info.get("grossProfits", None))
+                target_price = info.get("targetMeanPrice", "N/A")
+                rating = info.get("recommendationKey", "N/A")
+
                 company_name = info.get("longName", ticker.upper())
                 current_price = info.get("regularMarketPrice")
                 open_price = info.get("regularMarketOpen")
@@ -334,7 +345,12 @@ if view_mode == "Market Analysis":
                         unsafe_allow_html=True
                     )
                 with col2:
-                    range_option = st.selectbox("", options=range_options, index=range_options.index(range_option), key="range_option", label_visibility="collapsed")
+                    range_option = st.selectbox(
+                        "", options=range_options,
+                        index=range_options.index(range_option),
+                        key="range_option",
+                        label_visibility="collapsed"
+                    )
 
                 st.line_chart(data['Close'])
 
@@ -369,12 +385,12 @@ As of today, summarize the current market status of {ticker.upper()} using the f
     - Price Change: {price_diff:+.2f}, Percent Change: {percent:+.2f}%
 
 2. **Recent Financials**:
-    - Revenue (2024): $245.12B (+15.67% YoY)
-    - Earnings (2024): $88.14B (+21.8% YoY)
+    - Revenue (2024): {revenue_2024}
+    - Earnings (2024): {earnings_2024}
 
 3. **Analyst Insights**:
-    - Analyst Target Price: {info.get("targetMeanPrice", "N/A")}
-    - Analyst Rating: {info.get("recommendationKey", "N/A")}
+    - Analyst Target Price: {target_price}
+    - Analyst Rating: {rating}
 
 4. **News Headlines**:
 {news_summary}
@@ -389,35 +405,6 @@ Provide a concise, professional ~120-word financial analysis covering:
                         llm_response = llm.predict(market_summary_prompt)
                         st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
-                        # Chatbot
-                        st.markdown("#### Ask a Question About This Stock")
-                        question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
-                        if question:
-                            try:
-                                chatbot_prompt = f"""
-You are a helpful financial assistant. Answer the following question using the information below about {ticker.upper()}:
-
-Company Info:
-- Name: {company_name}
-- Current Price: ${current_price}
-- Day Range: {low} - {high}
-- 52 Week Range: {year_low} - {year_high}
-- Volume: {volume}
-- Analyst Target Price: {info.get('targetMeanPrice', 'N/A')}
-- Analyst Rating: {info.get('recommendationKey', 'N/A')}
-- Summary: {info.get('longBusinessSummary', '')[:800]}
-
-Recent News:
-{news_summary}
-
-User Question: {question}
-
-Answer:
-                                """
-                                chatbot_response = llm.predict(chatbot_prompt)
-                                st.markdown(f"<div style='color:black; font-size:16px'>{chatbot_response}</div>", unsafe_allow_html=True)
-                            except Exception as e:
-                                st.error(f"Chatbot failed to generate response: {e}")
                     except Exception as e:
                         st.error(f"LLM summary generation failed: {e}")
         except Exception as e:

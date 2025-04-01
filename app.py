@@ -519,7 +519,7 @@ if view_mode == "Digital Advisor":
     def extract_risks(input: str) -> str:
         return f"Here are extracted risk factors based on the input: {input}"
 
-    def fetch_metrics(input: str) -> str:
+   def fetch_metrics(input: str) -> str:
     try:
         ticker = input.upper().strip()
         stock = yf.Ticker(ticker)
@@ -535,6 +535,7 @@ if view_mode == "Digital Advisor":
 
     except Exception as e:
         return f"Failed to fetch metrics for {input}: {e}"
+
 
 
     from langchain.agents import Tool, initialize_agent

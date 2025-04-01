@@ -447,7 +447,6 @@ Provide a concise, professional ~120-word financial analysis covering:
 
 # --- Digital Advisor ---
 if view_mode == "Digital Advisor":
-    st.markdown("## Vanguard Digital Advisor")
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
     # --- Define tools ---

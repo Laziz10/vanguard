@@ -148,7 +148,7 @@ def handle_question(vectorstore, llm):
 # --- Main Logic ---
 
 # --- Speaker Analysis ---
-if uploaded_file and not selected_benchmark:
+if view_mode == "Speaker Analysis" and uploaded_file:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])

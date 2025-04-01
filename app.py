@@ -77,6 +77,7 @@ sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bo
 
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
+    
     view_mode = st.radio("", ["Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
     
     if view_mode == "Speaker Analysis":
@@ -90,25 +91,27 @@ with st.sidebar:
         st.session_state.selected_speaker = selected_speaker
         st.session_state.selected_benchmark = None
 
-    if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
-    st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
-    selected_benchmark = st.selectbox(
-        label="Benchmark Dropdown",
-        options=benchmark_stocks,
-        index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
-        label_visibility="collapsed",
-        key="benchmark_dropdown"
+    elif view_mode in ["Benchmark Analysis", "Risk Analysis"]:
+        st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
+        selected_benchmark = st.selectbox(
+            label="Benchmark Dropdown",
+            options=benchmark_stocks,
+            index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
+            label_visibility="collapsed",
+            key="benchmark_dropdown"
         )
-    st.session_state.selected_benchmark = selected_benchmark
-    st.session_state.selected_speaker = "All"
-    
+        st.session_state.selected_benchmark = selected_benchmark
+        st.session_state.selected_speaker = "All"
+
+    # Upload only when file is not yet uploaded
     if st.session_state.uploaded_file is None:
         st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
 
-    if uploaded is not None:
-       st.session_state.uploaded_file = uploaded
-       st.rerun()
+        if uploaded is not None:
+            st.session_state.uploaded_file = uploaded
+            st.rerun()
+
 
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")

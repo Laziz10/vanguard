@@ -458,7 +458,7 @@ if view_mode == "Digital Advisor":
     def summarize_transcript(input: str = "") -> str:
         return "Here is the summary of the latest transcript for MSFT..."  # Replace with actual summary logic
 
-   def compare_stocks(input: str) -> str:
+    def compare_stocks(input: str) -> str:
     
         # Extract tickers (basic regex, uppercase 3–5 letter words)
         tickers = re.findall(r"\b[A-Z]{3,5}\b", input.upper())

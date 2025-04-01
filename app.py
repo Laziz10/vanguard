@@ -269,7 +269,7 @@ if uploaded_file and not selected_benchmark:
 
             del st.session_state.pending_question
 
-# --- Speaker Analysis ---
+# --- Market Analysis ---
 
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
@@ -292,7 +292,13 @@ if view_mode == "Market Analysis":
         "MAX": ("max", "1mo")
     }
 
-    range_option = st.selectbox("Select Time Range", options=range_options, index=range_options.index(st.session_state.range_option), key="range_option")
+    range_option = st.selectbox(
+        "Select Time Range",
+        options=range_options,
+        index=range_options.index(st.session_state.range_option),
+        key="range_option"
+    )
+
     period, interval = range_map[range_option]
 
     if ticker:
@@ -320,16 +326,12 @@ if view_mode == "Market Analysis":
 
                 st.markdown(f"### **{company_name} ({ticker.upper()})**")
 
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.markdown(
-                        f"<h1 style='color:black;'>${current_price:.2f} "
-                        f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
-                        f"({arrow}{abs(percent):.2f}%)</span></h1>",
-                        unsafe_allow_html=True
-                    )
-                with col2:
-                    pass  # Range select already shown above
+                st.markdown(
+                    f"<h1 style='color:maroon;'>${current_price:.2f} "
+                    f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
+                    f"({arrow}{abs(percent):.2f}%)</span></h1>",
+                    unsafe_allow_html=True
+                )
 
                 st.line_chart(data['Close'])
 
@@ -384,7 +386,7 @@ Provide a concise, professional ~120-word financial analysis covering:
                         llm_response = llm.predict(market_summary_prompt)
                         st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
-                        # Chatbot
+                        # Chatbot Q&A
                         st.markdown("#### \U0001F4AC Ask a Question About This Stock")
                         question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
                         if question:
@@ -417,8 +419,8 @@ Answer:
                         st.error(f"LLM summary generation failed: {e}")
         except Exception as e:
             st.error(f"Error fetching data: {e}")
-            
 
+            
 # --- Benchmark Analysis ---
 if view_mode == "Benchmark Analysis" and selected_benchmark:
     years = list(range(2015, 2025))

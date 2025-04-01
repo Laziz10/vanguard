@@ -417,7 +417,7 @@ Provide a concise, professional ~120-word financial analysis covering:
                         st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
                         # --- Memory-Aware Chatbot ---
-                        st.markdown("#### 💬 Ask a Question About This Stock")
+                        st.markdown("#### Ask a Question About This Stock")
                         question = st.text_input("Ask your question (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
 
                         if question:
@@ -430,12 +430,12 @@ Provide a concise, professional ~120-word financial analysis covering:
                                 st.error(f"Chatbot failed to generate response: {e}")
 
                         # --- Clear Memory Button ---
-                        if st.button("🗑️ Clear Chat Memory"):
+                        if st.button("Clear Chat Memory"):
                             st.session_state.market_memory.clear()
                             st.success("Chat memory cleared!")
 
                         # --- Conversation History Viewer ---
-                        with st.expander("🧾 Conversation History"):
+                        with st.expander("Conversation History"):
                             for msg in st.session_state.market_memory.chat_memory.messages:
                                 role = msg.type.capitalize()
                                 st.markdown(f"**{role}:** {msg.content}")

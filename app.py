@@ -548,42 +548,42 @@ Write a concise comparison.
 
     # You can now register `compare_transcripts` as a Tool in your tools list
 
-
     def compare_stocks(input: str) -> str:
-    import yfinance as yf
-    import re
+        import yfinance as yf
+        import re
 
-    # Extract tickers from input
-    tickers = re.findall(r"\b[A-Z]{3,5}\b", input.upper())
-    if len(tickers) < 2:
-        return "Please provide at least two stock tickers to compare."
+        # Extract tickers from input
+        tickers = re.findall(r"\b[A-Z]{3,5}\b", input.upper())
+        if len(tickers) < 2:
+            return "Please provide at least two stock tickers to compare."
 
-    try:
-        stock_data = {}
-        for ticker in tickers[:2]:
-            stock = yf.Ticker(ticker)
-            info = stock.info
+        try:
+            stock_data = {}
+            for ticker in tickers[:2]:
+                stock = yf.Ticker(ticker)
+                info = stock.info
 
-            if not info or not isinstance(info, dict):
-                return f"Failed to retrieve data for {ticker}."
+                if not info or not isinstance(info, dict):
+                    return f"Failed to retrieve data for {ticker}."
 
-            stock_data[ticker] = {
-                "price": info.get("regularMarketPrice", "N/A"),
-                "pe_ratio": info.get("trailingPE", "N/A"),
-                "market_cap": info.get("marketCap", "N/A")
-            }
+                stock_data[ticker] = {
+                    "price": info.get("regularMarketPrice", "N/A"),
+                    "pe_ratio": info.get("trailingPE", "N/A"),
+                    "market_cap": info.get("marketCap", "N/A")
+                }
 
-        comparison = f"### 📊 Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
-        for ticker, data in stock_data.items():
-            comparison += f"**{ticker}**\n"
-            comparison += f"- Price: ${data['price']}\n"
-            comparison += f"- P/E Ratio: {data['pe_ratio']}\n"
-            comparison += f"- Market Cap: {data['market_cap']:,}\n\n"
+            comparison = f"### Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
+            for ticker, data in stock_data.items():
+                comparison += f"**{ticker}**\n"
+                comparison += f"- Price: ${data['price']}\n"
+                comparison += f"- P/E Ratio: {data['pe_ratio']}\n"
+                comparison += f"- Market Cap: {data['market_cap']:,}\n\n"
 
-        return comparison.strip()
+            return comparison.strip()
 
-    except Exception as e:
-        return f"Comparison failed due to: {e}"
+        except Exception as e:
+            return f"Comparison failed due to: {e}"
+
 
     def extract_risks(input: str) -> str:
         return f"Here are extracted risk factors based on the input: {input}"

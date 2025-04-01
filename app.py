@@ -23,7 +23,6 @@ import feedparser
 
 # Show Vanguard logo at the top across all views
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
-st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
 # --- Global Styling ---
 st.markdown("""

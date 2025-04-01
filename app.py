@@ -18,6 +18,7 @@ if "llm" not in locals():
 from langchain.chains import RetrievalQA
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
+from langchain.callbacks import StreamlitCallbackHandler
 
 # --- Initialize memory and LLM chain (only once)
 if "market_memory" not in st.session_state:
@@ -585,14 +586,20 @@ if view_mode == "Digital Advisor":
     # --- User Query ---
     user_query = st.text_input("", key="advisor_query")
 
+
+
+
+
+
     if user_query:
         with st.spinner("Thinking like a Digital Advisor..."):
             try:
-                result = digital_agent.run(user_query)
-                st.markdown(f"### Advisor Response\n{result}")
+                st_callback = StreamlitCallbackHandler(st.container())  # this adds the live steps output
+                result = digital_agent.run(user_query, callbacks=[st_callback])
+                st.markdown("### Digital Advisor Response")
+                st.markdown(result)
             except Exception as e:
                 st.error(f"Agent failed: {e}")
-
 
 # --- Benchmark Analysis ---
 if view_mode == "Benchmark Analysis" and selected_benchmark:

@@ -494,7 +494,7 @@ if view_mode == "Digital Advisor":
                 llm = ChatOpenAI(temperature=0)
                 chain = load_summarize_chain(llm, chain_type="stuff")
                 summary = chain.run(chunks)
-                summaries.append(f"### 📄 Summary for {uploaded_file.name}\n{summary.strip()}")
+                summaries.append(f"### Summary for {uploaded_file.name}\n{summary.strip()}")
 
             return "\n\n".join(summaries)
 

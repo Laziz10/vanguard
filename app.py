@@ -91,10 +91,10 @@ with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
 
     # View selection
-    view_mode = st.radio(
-        label="",
-        options=["Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"]
-    )
+    view_mode = st.radio("", [
+    "Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations",
+    "Comparison Analysis", "Digital Advisor"])
+
 
     # SPEAKER ANALYSIS
     if view_mode == "Speaker Analysis":
@@ -444,6 +444,73 @@ Provide a concise, professional ~120-word financial analysis covering:
                         st.error(f"LLM summary generation failed: {e}")
         except Exception as e:
             st.error(f"Error fetching data: {e}")
+
+# --- Digital Advisor ---
+if view_mode == "Digital Advisor":
+    st.markdown("## Vanguard Digital Advisor")
+    st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
+
+    # --- Define tools ---
+    def summarize_transcript(company="MSFT"):
+        return "(Summary of latest transcript...)"  # Replace with actual summary logic
+
+    def compare_stocks(input):
+        return "(Comparison between stocks...)"  # Replace with real-time metrics logic
+
+    def extract_risks(input):
+        return "(Extracted risk factors...)"  # Replace with RAG + filtering logic
+
+    def fetch_metrics(ticker="MSFT"):
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        return f"Current Price: {info.get('regularMarketPrice')}, P/E Ratio: {info.get('trailingPE')}"
+
+    from langchain.agents import Tool, initialize_agent
+
+    tools = [
+        Tool(
+            name="SummarizeTranscript",
+            func=lambda q: summarize_transcript(),
+            description="Summarize the latest earnings call transcript."
+        ),
+        Tool(
+            name="CompareStocks",
+            func=compare_stocks,
+            description="Compare performance between two or more companies."
+        ),
+        Tool(
+            name="ExtractRisks",
+            func=extract_risks,
+            description="Extract risk factors from earnings transcripts."
+        ),
+        Tool(
+            name="FetchMetrics",
+            func=fetch_metrics,
+            description="Get real-time stock metrics like price and P/E ratio."
+        )
+    ]
+
+    # --- Initialize Agent ---
+    from langchain.chat_models import ChatOpenAI
+
+    digital_agent = initialize_agent(
+        tools,
+        llm=ChatOpenAI(temperature=0),
+        agent="zero-shot-react-description",
+        verbose=True
+    )
+
+    # --- User Query ---
+    user_query = st.text_input("Ask your question:", key="advisor_query")
+
+    if user_query:
+        with st.spinner("Thinking like a digital analyst..."):
+            try:
+                result = digital_agent.run(user_query)
+                st.markdown(f"### Advisor Response\n{result}")
+            except Exception as e:
+                st.error(f"Agent failed: {e}")
 
 # --- Benchmark Analysis ---
 if view_mode == "Benchmark Analysis" and selected_benchmark:

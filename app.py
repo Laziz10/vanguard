@@ -23,8 +23,7 @@ import feedparser
 
 # Show Vanguard logo at the top across all views
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
-st.image("vanguard_logo.png", width=180)
-
+st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
 # --- Global Styling ---
 st.markdown("""
@@ -32,27 +31,12 @@ st.markdown("""
     .block-container {
         padding-top: 1rem;
     }
-    [data-testid="stSidebar"] > div:first-child {
-        padding-top: 0.3rem !important;
-    }
-    .stRadio label span {
-        color: white !important;
-        font-weight: bold !important;
-    }
-    .stSelectbox label {
-        color: white !important;
-        font-weight: bold !important;
-    }
+    ...
     </style>
 """, unsafe_allow_html=True)
 
-def load_css():
-    try:
-        with open("style.css") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except:
-        pass
-load_css()
+# Now render the logo AFTER padding is applied
+st.image("vanguard_logo.png", width=180)
 
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key

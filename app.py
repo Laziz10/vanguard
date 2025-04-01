@@ -21,7 +21,9 @@ import yfinance as yf
 import datetime
 import feedparser
 
+# --- Main Header ---
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
+st.image("vanguard_logo.png", width=180)  
 
 # --- Global Styling ---
 st.markdown("""
@@ -77,10 +79,9 @@ sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bo
 
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
-
     view_mode = st.radio("", ["Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
     
-    if view_mode == "Speaker Analysis":
+if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
         selected_speaker = st.selectbox(
             label="Speaker Dropdown",
@@ -257,9 +258,6 @@ Answer:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-# --- Main Header ---
-st.image("vanguard_logo.png", width=180)  
-
 uploaded_file = st.session_state.uploaded_file
 selected_speaker = st.session_state.selected_speaker
 selected_benchmark = st.session_state.selected_benchmark
@@ -389,11 +387,7 @@ if view_mode == "Recommendations":
         <li><span style='font-weight:bold'>Focus on what you can control</span>: Set clear goals, choose the right asset mix, and rebalance as needed.</li>
     </ul>
     """, unsafe_allow_html=True)
-
-
-
-
-
+    
 # --- Transcript + Speaker Summary ---
 if uploaded_file and not selected_benchmark:
     pdf_bytes = BytesIO(uploaded_file.getvalue())

@@ -127,15 +127,6 @@ with st.sidebar:
         st.session_state.selected_speaker = "All"
         st.session_state.selected_benchmark = None
 
-    # FILE UPLOADER
-    if st.session_state.uploaded_file is None:
-        st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
-        uploaded = st.file_uploader("", type=["pdf"], key="uploader")
-
-        if uploaded is not None:
-            st.session_state.uploaded_file = uploaded
-            st.rerun()
-
     if view_mode == "Digital Advisor":
         st.markdown("### Upload Earnings Calls")
         uploaded_files = st.file_uploader(

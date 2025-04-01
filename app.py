@@ -447,15 +447,46 @@ Provide a concise, professional ~120-word financial analysis covering:
 
 # --- Digital Advisor View with LangChain Agent ---
 if view_mode == "Digital Advisor":
+    st.markdown("## 🤖 Vanguard Digital Advisor")
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
-    # --- Define Tools with Actual Logic ---
     import yfinance as yf
     import re
+    from io import BytesIO
+    import fitz  # PyMuPDF
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain.chat_models import ChatOpenAI
+    from langchain.chains.summarize import load_summarize_chain
 
+    # --- Real Summarization Logic ---
     def summarize_transcript(input: str = "") -> str:
-        # Placeholder summary logic (you can replace with real RAG)
-        return "This is a placeholder summary of the most recent earnings transcript for MSFT."
+        try:
+            uploaded_files = st.session_state.get("uploaded_files")
+            if not uploaded_files or len(uploaded_files) == 0:
+                return "Please upload one or more earnings call transcripts first."
+
+            summaries = []
+            for uploaded_file in uploaded_files:
+                pdf_bytes = BytesIO(uploaded_file.getvalue())
+                with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                    raw_text = "".join([page.get_text() for page in doc])
+
+                if not raw_text.strip():
+                    summaries.append(f"Transcript '{uploaded_file.name}' is empty or could not be parsed.")
+                    continue
+
+                splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+                chunks = splitter.create_documents([raw_text])
+
+                llm = ChatOpenAI(temperature=0)
+                chain = load_summarize_chain(llm, chain_type="stuff")
+                summary = chain.run(chunks)
+                summaries.append(f"### 📄 Summary for {uploaded_file.name}\n{summary.strip()}")
+
+            return "\n\n".join(summaries)
+
+        except Exception as e:
+            return f"Summary generation failed: {e}"
 
     def compare_stocks(input: str) -> str:
         tickers = re.findall(r"\b[A-Z]{3,5}\b", input.upper())
@@ -473,7 +504,7 @@ if view_mode == "Digital Advisor":
                     "market_cap": info.get("marketCap", "N/A")
                 }
 
-            comparison = f"### 📊 Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
+            comparison = f"### Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
             for ticker, data in stock_data.items():
                 comparison += f"**{ticker}**\n"
                 comparison += f"- Price: ${data['price']}\n"
@@ -486,7 +517,6 @@ if view_mode == "Digital Advisor":
             return f"Comparison failed due to: {e}"
 
     def extract_risks(input: str) -> str:
-        # Placeholder RAG logic (you can replace with vectorstore Q&A later)
         return f"Here are extracted risk factors based on the input: {input}"
 
     def fetch_metrics(input: str) -> str:
@@ -499,13 +529,12 @@ if view_mode == "Digital Advisor":
             return f"Failed to fetch metrics for {input}: {e}"
 
     from langchain.agents import Tool, initialize_agent
-    from langchain.chat_models import ChatOpenAI
 
     tools = [
         Tool(
             name="SummarizeTranscript",
             func=summarize_transcript,
-            description="Summarize the latest earnings call transcript."
+            description="Summarize one or more uploaded earnings call transcripts."
         ),
         Tool(
             name="CompareStocks",
@@ -524,6 +553,7 @@ if view_mode == "Digital Advisor":
         )
     ]
 
+    from langchain.chat_models import ChatOpenAI
     digital_agent = initialize_agent(
         tools=tools,
         llm=ChatOpenAI(temperature=0),
@@ -531,16 +561,23 @@ if view_mode == "Digital Advisor":
         verbose=True
     )
 
-    # --- User Query Input ---
+    # --- PDF Upload ---
+    st.markdown("#### Upload One or More Earnings Call PDFs")
+    uploaded_files = st.file_uploader("Upload PDF(s)", type=["pdf"], accept_multiple_files=True)
+    if uploaded_files:
+        st.session_state.uploaded_files = uploaded_files
+
+    # --- User Query ---
     user_query = st.text_input("Ask your question:", key="advisor_query")
 
     if user_query:
-        with st.spinner("Thinking like a Digital Advisor..."):
+        with st.spinner("Thinking like a digital analyst..."):
             try:
                 result = digital_agent.run(user_query)
                 st.markdown(f"### Advisor Response\n{result}")
             except Exception as e:
                 st.error(f"Agent failed: {e}")
+
 
 # --- Benchmark Analysis ---
 if view_mode == "Benchmark Analysis" and selected_benchmark:

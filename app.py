@@ -21,21 +21,35 @@ import yfinance as yf
 import datetime
 import feedparser
 
-# Show Vanguard logo at the top across all views
+import streamlit as st
+
+# Set layout FIRST and ONLY ONCE
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# --- Global Styling ---
+# Global Styling
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 1rem;
+        padding-top: 2.5rem;
     }
-    ...
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 0.3rem !important;
+    }
+    .stRadio label span {
+        color: white !important;
+        font-weight: bold !important;
+    }
+    .stSelectbox label {
+        color: white !important;
+        font-weight: bold !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Now render the logo AFTER padding is applied
+# Vanguard Logo (visible, correctly spaced)
 st.image("vanguard_logo.png", width=180)
+st.markdown("<div style='margin-bottom: 1rem'></div>", unsafe_allow_html=True)
+
 
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key

@@ -19,6 +19,16 @@ from langchain.chains import RetrievalQA
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 
+# --- Initialize memory and LLM chain (only once)
+if "market_memory" not in st.session_state:
+    st.session_state.market_memory = ConversationBufferMemory(return_messages=True)
+
+if "market_llm_chain" not in st.session_state:
+    st.session_state.market_llm_chain = ConversationChain(
+        llm=llm,
+        memory=st.session_state.market_memory,
+        verbose=False)
+
 import yfinance as yf
 import datetime
 import feedparser
@@ -277,8 +287,6 @@ if view_mode == "Speaker Analysis" and uploaded_file:
             del st.session_state.pending_question
 
 # --- Market Analysis ---
-
-# --- Market Analysis ---
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
 
@@ -311,7 +319,7 @@ if view_mode == "Market Analysis":
             if data.empty or "regularMarketPrice" not in info:
                 st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
             else:
-                # 🧠 Pull real financials
+                # --- Real financials formatting ---
                 def format_billions(num):
                     if not num or num == "N/A":
                         return "N/A"
@@ -375,6 +383,7 @@ if view_mode == "Market Analysis":
 
                 if "llm" in locals():
                     try:
+                        # --- Market Summary Prompt ---
                         market_summary_prompt = f"""
 As of today, summarize the current market status of {ticker.upper()} using the following context:
 
@@ -406,6 +415,30 @@ Provide a concise, professional ~120-word financial analysis covering:
                         st.markdown("#### LLM Market Summary")
                         llm_response = llm.predict(market_summary_prompt)
                         st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
+
+                        # --- Memory-Aware Chatbot ---
+                        st.markdown("#### 💬 Ask a Question About This Stock")
+                        question = st.text_input("Ask your question (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
+
+                        if question:
+                            try:
+                                intro = f"You are a helpful financial assistant. The user is asking about {ticker.upper()} and has seen its key metrics and news."
+                                full_prompt = f"{intro}\n\nUser: {question}"
+                                response = st.session_state.market_llm_chain.run(full_prompt)
+                                st.markdown(f"<div style='color:black; font-size:16px'>{response}</div>", unsafe_allow_html=True)
+                            except Exception as e:
+                                st.error(f"Chatbot failed to generate response: {e}")
+
+                        # --- Clear Memory Button ---
+                        if st.button("🗑️ Clear Chat Memory"):
+                            st.session_state.market_memory.clear()
+                            st.success("Chat memory cleared!")
+
+                        # --- Conversation History Viewer ---
+                        with st.expander("🧾 Conversation History"):
+                            for msg in st.session_state.market_memory.chat_memory.messages:
+                                role = msg.type.capitalize()
+                                st.markdown(f"**{role}:** {msg.content}")
 
                     except Exception as e:
                         st.error(f"LLM summary generation failed: {e}")

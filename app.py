@@ -16,6 +16,8 @@ from langchain.chat_models import ChatOpenAI
 if "llm" not in locals():
     llm = ChatOpenAI(temperature=0)
 from langchain.chains import RetrievalQA
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
 
 import yfinance as yf
 import datetime

@@ -88,7 +88,7 @@ with st.sidebar:
 
 view_mode = st.radio("", ["Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
 
-    if view_mode == "Speaker Analysis":
+if view_mode == "Speaker Analysis":
         st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
         selected_speaker = st.selectbox(
             label="Speaker Dropdown",

@@ -446,47 +446,53 @@ Provide a concise, professional ~120-word financial analysis covering:
             st.error(f"Error fetching data: {e}")
 
 # --- Digital Advisor ---
+# --- Digital Advisor View with LangChain Agent ---
 if view_mode == "Digital Advisor":
+    st.markdown("## 🤖 Vanguard Digital Advisor")
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
     # --- Define tools ---
-    def summarize_transcript(company="MSFT"):
-        return "(Summary of latest transcript...)"  # Replace with actual summary logic
+    def summarize_transcript(input: str = "") -> str:
+        return "Here is the summary of the latest transcript for MSFT..."  # Replace with actual summary logic
 
-    def compare_stocks(input):
-        return "(Comparison between stocks...)"  # Replace with real-time metrics logic
+    def compare_stocks(input: str) -> str:
+        return f"Comparison between stocks based on input: {input}"  # Replace with real-time metrics logic
 
-    def extract_risks(input):
-        return "(Extracted risk factors...)"  # Replace with RAG + filtering logic
+    def extract_risks(input: str) -> str:
+        return f"Here are extracted risk factors based on: {input}"  # Replace with RAG + filtering logic
 
-    def fetch_metrics(ticker="MSFT"):
-        import yfinance as yf
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        return f"Current Price: {info.get('regularMarketPrice')}, P/E Ratio: {info.get('trailingPE')}"
+    def fetch_metrics(input: str) -> str:
+        try:
+            import yfinance as yf
+            ticker = input.upper() if input else "MSFT"
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            return f"{ticker} - Current Price: {info.get('regularMarketPrice')}, P/E Ratio: {info.get('trailingPE')}"
+        except Exception as e:
+            return f"Failed to fetch metrics for {input}: {e}"
 
     from langchain.agents import Tool, initialize_agent
 
     tools = [
         Tool(
             name="SummarizeTranscript",
-            func=lambda q: summarize_transcript(),
+            func=summarize_transcript,
             description="Summarize the latest earnings call transcript."
         ),
         Tool(
             name="CompareStocks",
             func=compare_stocks,
-            description="Compare performance between two or more companies."
+            description="Compare performance between two or more companies. Input should be like: 'Compare MSFT and AAPL Q2 performance'."
         ),
         Tool(
             name="ExtractRisks",
             func=extract_risks,
-            description="Extract risk factors from earnings transcripts."
+            description="Extract risk factors from earnings transcripts. Input can be something like 'Risks for Google in Q4'."
         ),
         Tool(
             name="FetchMetrics",
             func=fetch_metrics,
-            description="Get real-time stock metrics like price and P/E ratio."
+            description="Get real-time stock metrics like price and P/E ratio. Input should be a ticker symbol (e.g., 'MSFT')."
         )
     ]
 

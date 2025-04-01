@@ -7,7 +7,77 @@ import re
 import streamlit as st
 import fitz  # PyMuPDF
 from io import BytesIO
-import pandas as pd
+import pandas as pd# --- Digital Advisor View with LangChain Agent ---
+if view_mode == "Digital Advisor":
+    st.markdown("## 🤖 Vanguard Digital Advisor")
+    st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
+
+    # --- Define tools ---
+    def summarize_transcript(input: str = "") -> str:
+        return "Here is the summary of the latest transcript for MSFT..."  # Replace with actual summary logic
+
+    def compare_stocks(input: str) -> str:
+        return f"Comparison between stocks based on input: {input}"  # Replace with real-time metrics logic
+
+    def extract_risks(input: str) -> str:
+        return f"Here are extracted risk factors based on: {input}"  # Replace with RAG + filtering logic
+
+    def fetch_metrics(input: str) -> str:
+        try:
+            import yfinance as yf
+            ticker = input.upper() if input else "MSFT"
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            return f"{ticker} - Current Price: {info.get('regularMarketPrice')}, P/E Ratio: {info.get('trailingPE')}"
+        except Exception as e:
+            return f"Failed to fetch metrics for {input}: {e}"
+
+    from langchain.agents import Tool, initialize_agent
+
+    tools = [
+        Tool(
+            name="SummarizeTranscript",
+            func=summarize_transcript,
+            description="Summarize the latest earnings call transcript."
+        ),
+        Tool(
+            name="CompareStocks",
+            func=compare_stocks,
+            description="Compare performance between two or more companies. Input should be like: 'Compare MSFT and AAPL Q2 performance'."
+        ),
+        Tool(
+            name="ExtractRisks",
+            func=extract_risks,
+            description="Extract risk factors from earnings transcripts. Input can be something like 'Risks for Google in Q4'."
+        ),
+        Tool(
+            name="FetchMetrics",
+            func=fetch_metrics,
+            description="Get real-time stock metrics like price and P/E ratio. Input should be a ticker symbol (e.g., 'MSFT')."
+        )
+    ]
+
+    # --- Initialize Agent ---
+    from langchain.chat_models import ChatOpenAI
+
+    digital_agent = initialize_agent(
+        tools,
+        llm=ChatOpenAI(temperature=0),
+        agent="zero-shot-react-description",
+        verbose=True
+    )
+
+    # --- User Query ---
+    user_query = st.text_input("Ask your question:", key="advisor_query")
+
+    if user_query:
+        with st.spinner("Thinking like a digital analyst..."):
+            try:
+                result = digital_agent.run(user_query)
+                st.markdown(f"### Advisor Response\n{result}")
+            except Exception as e:
+                st.error(f"Agent failed: {e}")
+
 
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -448,7 +518,7 @@ Provide a concise, professional ~120-word financial analysis covering:
 # --- Digital Advisor ---
 # --- Digital Advisor View with LangChain Agent ---
 if view_mode == "Digital Advisor":
-    st.markdown("## 🤖 Vanguard Digital Advisor")
+    st.markdown("## Vanguard Digital Advisor")
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
     # --- Define tools ---

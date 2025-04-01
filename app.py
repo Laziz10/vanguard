@@ -519,14 +519,14 @@ if view_mode == "Digital Advisor":
     def extract_risks(input: str) -> str:
         return f"Here are extracted risk factors based on the input: {input}"
 
-   def fetch_metrics(input: str) -> str:
-    try:
-        ticker = input.upper().strip()
-        stock = yf.Ticker(ticker)
-        info = stock.info
+    def fetch_metrics(input: str) -> str:
+        try:
+            ticker = input.upper().strip()
+            stock = yf.Ticker(ticker)
+            info = stock.info
 
-        current_price = info.get("regularMarketPrice")
-        pe_ratio = info.get("trailingPE")
+            current_price = info.get("regularMarketPrice")
+            pe_ratio = info.get("trailingPE")
 
         if current_price is None:
             return f"Unable to retrieve the stock price for {ticker} today."
@@ -535,7 +535,6 @@ if view_mode == "Digital Advisor":
 
     except Exception as e:
         return f"Failed to fetch metrics for {input}: {e}"
-
 
 
     from langchain.agents import Tool, initialize_agent

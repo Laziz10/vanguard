@@ -272,8 +272,8 @@ Answer:
                                 st.error(f"Chatbot failed to generate response: {e}")
                     except Exception as e:
                         st.error(f"LLM summary generation failed: {e}")
-            except Exception as e:
-                st.error(f"Error fetching data: {e}")
+                except Exception as e:
+                    st.error(f"Error fetching data: {e}")
 
 # --- Transcript + Speaker Summary ---
 if view_mode == "Speaker Analysis" and uploaded_file:

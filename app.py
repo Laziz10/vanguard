@@ -253,8 +253,8 @@ if st.session_state.uploaded_file is None:
     st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
     uploaded = st.file_uploader("", type=["pdf"], key="uploader")
     if uploaded is not None:
-    st.session_state.uploaded_file = uploaded
-    st.rerun()
+        st.session_state.uploaded_file = uploaded
+        st.rerun()
 
 # --- Main Header ---
 st.image("vanguard_logo.png", width=180)  

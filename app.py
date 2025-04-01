@@ -581,12 +581,6 @@ if view_mode == "Digital Advisor":
         verbose=True
     )
 
-    # --- PDF Upload ---
-    st.markdown("#### Upload One or More Earnings Call PDFs")
-    uploaded_files = st.file_uploader("Upload PDF(s)", type=["pdf"], accept_multiple_files=True)
-    if uploaded_files:
-        st.session_state.uploaded_files = uploaded_files
-
     # --- User Query ---
     user_query = st.text_input("Ask your question:", key="advisor_query")
 

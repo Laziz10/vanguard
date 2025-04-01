@@ -390,7 +390,7 @@ Provide a concise, professional ~120-word financial analysis covering:
                         st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
                         # Chatbot
-                        st.markdown("#### \U0001F4AC Ask a Question About This Stock")
+                        st.markdown("#### Ask a Question About This Stock")
                         question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
                         if question:
                             try:

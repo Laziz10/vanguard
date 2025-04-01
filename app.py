@@ -22,14 +22,6 @@ from langchain.callbacks import StreamlitCallbackHandler
 
 from langchain.agents import initialize_agent, AgentType
 
-digital_agent = initialize_agent(
-    tools=tools,
-    llm=ChatOpenAI(temperature=0),
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True,
-    handle_parsing_errors=True  # 👈 this lets it retry when LLM output isn't parsable
-)
-
 # --- Initialize memory and LLM chain (only once)
 if "market_memory" not in st.session_state:
     st.session_state.market_memory = ConversationBufferMemory(return_messages=True)
@@ -642,19 +634,18 @@ Write a concise comparison.
     ]
 
     from langchain.chat_models import ChatOpenAI
+    from langchain.agents import initialize_agent, AgentType
+
     digital_agent = initialize_agent(
         tools=tools,
         llm=ChatOpenAI(temperature=0),
-        agent="zero-shot-react-description",
-        verbose=True
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        verbose=True,
+        handle_parsing_errors=True  # ✅ Add this line
     )
 
     # --- User Query ---
     user_query = st.text_input("", key="advisor_query")
-
-
-
-
 
 
     if user_query:

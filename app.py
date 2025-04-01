@@ -446,21 +446,18 @@ Provide a concise, professional ~120-word financial analysis covering:
             st.error(f"Error fetching data: {e}")
 
 # --- Digital Advisor View with LangChain Agent ---
-
-import yfinance as yf
-import re
-
 if view_mode == "Digital Advisor":
-    st.markdown("## Vanguard Digital Advisor")
     st.markdown("Ask anything about companies, earnings calls, risks, or performance.")
 
-    # --- Define tools ---
+    # --- Define Tools with Actual Logic ---
+    import yfinance as yf
+    import re
+
     def summarize_transcript(input: str = "") -> str:
-        return "Here is the summary of the latest transcript for MSFT..."  # Replace with actual summary logic
+        # Placeholder summary logic (you can replace with real RAG)
+        return "This is a placeholder summary of the most recent earnings transcript for MSFT."
 
     def compare_stocks(input: str) -> str:
-    
-        # Extract tickers (basic regex, uppercase 3–5 letter words)
         tickers = re.findall(r"\b[A-Z]{3,5}\b", input.upper())
         if len(tickers) < 2:
             return "Please provide at least two stock tickers to compare."
@@ -476,7 +473,7 @@ if view_mode == "Digital Advisor":
                     "market_cap": info.get("marketCap", "N/A")
                 }
 
-            comparison = f"### Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
+            comparison = f"### 📊 Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
             for ticker, data in stock_data.items():
                 comparison += f"**{ticker}**\n"
                 comparison += f"- Price: ${data['price']}\n"
@@ -488,7 +485,21 @@ if view_mode == "Digital Advisor":
         except Exception as e:
             return f"Comparison failed due to: {e}"
 
+    def extract_risks(input: str) -> str:
+        # Placeholder RAG logic (you can replace with vectorstore Q&A later)
+        return f"Here are extracted risk factors based on the input: {input}"
+
+    def fetch_metrics(input: str) -> str:
+        try:
+            ticker = input.upper() if input else "MSFT"
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            return f"{ticker} - Current Price: ${info.get('regularMarketPrice')}, P/E Ratio: {info.get('trailingPE')}"
+        except Exception as e:
+            return f"Failed to fetch metrics for {input}: {e}"
+
     from langchain.agents import Tool, initialize_agent
+    from langchain.chat_models import ChatOpenAI
 
     tools = [
         Tool(
@@ -513,21 +524,18 @@ if view_mode == "Digital Advisor":
         )
     ]
 
-    # --- Initialize Agent ---
-    from langchain.chat_models import ChatOpenAI
-
     digital_agent = initialize_agent(
-        tools,
+        tools=tools,
         llm=ChatOpenAI(temperature=0),
         agent="zero-shot-react-description",
         verbose=True
     )
 
-    # --- User Query ---
+    # --- User Query Input ---
     user_query = st.text_input("Ask your question:", key="advisor_query")
 
     if user_query:
-        with st.spinner("Thinking like a Digital Advisor..."):
+        with st.spinner("Thinking like a digital analyst..."):
             try:
                 result = digital_agent.run(user_query)
                 st.markdown(f"### Advisor Response\n{result}")

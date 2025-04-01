@@ -501,6 +501,54 @@ if view_mode == "Digital Advisor":
         except Exception as e:
             return f"Summary generation failed: {e}"
 
+    # --- New Comparison Tool for Two PDF Summaries ---
+    def compare_transcripts(input: str = "") -> str:
+        try:
+            uploaded_files = st.session_state.get("uploaded_files")
+            if not uploaded_files or len(uploaded_files) != 2:
+                return "Please upload exactly 2 PDF files to compare."
+
+            summaries = []
+            for uploaded_file in uploaded_files:
+                pdf_bytes = BytesIO(uploaded_file.getvalue())
+                with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                    raw_text = "".join([page.get_text() for page in doc])
+
+                splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+                chunks = splitter.create_documents([raw_text])
+
+                llm = ChatOpenAI(temperature=0)
+                chain = load_summarize_chain(llm, chain_type="stuff")
+                summary = chain.run(chunks)
+                summaries.append(summary.strip())
+
+            comparison_prompt = f"""
+Compare the following two earnings call summaries. Highlight differences in:
+1. Tone and sentiment
+2. Financial outlook
+3. Risks and concerns
+4. Forward-looking statements
+
+Summary 1:
+{summaries[0]}
+
+---
+
+Summary 2:
+{summaries[1]}
+
+Write a concise comparison.
+            """
+            llm = ChatOpenAI(temperature=0)
+            comparison = llm.predict(comparison_prompt)
+            return comparison
+
+        except Exception as e:
+            return f"Transcript comparison failed: {e}"
+
+    # You can now register `compare_transcripts` as a Tool in your tools list
+
+
     def compare_stocks(input: str) -> str:
         tickers = re.findall(r"\b[A-Z]{3,5}\b", input.upper())
         if len(tickers) < 2:

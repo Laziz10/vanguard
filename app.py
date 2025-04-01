@@ -93,7 +93,7 @@ with st.sidebar:
     # View selection
     view_mode = st.radio("", [
     "Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations",
-    "Comparison Analysis", "Digital Advisor"])
+    "Digital Advisor"])
 
 
     # SPEAKER ANALYSIS

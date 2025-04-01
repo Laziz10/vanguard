@@ -13,24 +13,15 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chat_models import ChatOpenAI
-if "llm" not in locals():
-    llm = ChatOpenAI(temperature=0)
 from langchain.chains import RetrievalQA
 
-import yfinance as yf
-import datetime
-import feedparser
-
-import streamlit as st
-
-# Set layout FIRST and ONLY ONCE
 st.set_page_config(page_title="Earnings Call Summarizer", layout="wide")
 
-# Global Styling
+# --- Global Styling ---
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 2.5rem;
+        padding-top: 1rem;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 0.3rem !important;
@@ -45,10 +36,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# Vanguard Logo (visible, correctly spaced)
-st.image("vanguard_logo.png", width=180)
-st.markdown("<div style='margin-bottom: 1rem'></div>", unsafe_allow_html=True)
 
 def load_css():
     try:
@@ -82,152 +69,180 @@ benchmark_stocks = ["VGT", "GOOGL", "AAPL", "AMZN"]
 # --- Sidebar ---
 sidebar_header_style = "color:white; font-weight:bold; font-size:16px; margin-bottom:0.25rem;"
 
-# Sidebar for selecting the view mode
 with st.sidebar:
     st.markdown(f"<div style='{sidebar_header_style}'>Investor Menu</div>", unsafe_allow_html=True)
-    view_mode = st.radio("", ["Speaker Analysis", "Market Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
 
-# Main content for each view mode
-if view_mode == "Speaker Analysis":
-    st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
-    selected_speaker = st.selectbox(
-        label="Speaker Dropdown",
-        options=speakers,
-        index=speakers.index(st.session_state.selected_speaker),
-        label_visibility="collapsed"
-    )
-    st.session_state.selected_speaker = selected_speaker
-    st.session_state.selected_benchmark = None
+    view_mode = st.radio("", ["Speaker Analysis", "Benchmark Analysis", "Risk Analysis", "Recommendations"])
 
-    # PDF Upload widget ONLY for Speaker Analysis
+    if view_mode == "Speaker Analysis":
+        st.markdown(f"<div style='{sidebar_header_style}'>Speaker Analysis</div>", unsafe_allow_html=True)
+        selected_speaker = st.selectbox(
+            label="Speaker Dropdown",
+            options=speakers,
+            index=speakers.index(st.session_state.selected_speaker),
+            label_visibility="collapsed"
+        )
+        st.session_state.selected_speaker = selected_speaker
+        st.session_state.selected_benchmark = None
+
+    if view_mode in ["Benchmark Analysis", "Risk Analysis"]:
+        st.markdown(f"<div style='{sidebar_header_style}'>{view_mode}</div>", unsafe_allow_html=True)
+        selected_benchmark = st.selectbox(
+            label="Benchmark Dropdown",
+            options=benchmark_stocks,
+            index=benchmark_stocks.index(st.session_state.selected_benchmark) if st.session_state.selected_benchmark else 0,
+            label_visibility="collapsed",
+            key="benchmark_dropdown"
+        )
+        st.session_state.selected_benchmark = selected_benchmark
+        st.session_state.selected_speaker = "All"
+    
     if st.session_state.uploaded_file is None:
-        st.markdown("**Upload Earnings Call PDF**", unsafe_allow_html=True)
+        st.markdown("### **Upload Earnings Call PDF**", unsafe_allow_html=True)
         uploaded = st.file_uploader("", type=["pdf"], key="uploader")
         if uploaded is not None:
             st.session_state.uploaded_file = uploaded
             st.rerun()
 
-elif view_mode == "Market Analysis":
-    st.markdown("### Market Analysis")
+# --- Main Header ---
+st.image("vanguard_logo.png", width=180)  
 
-    ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
+uploaded_file = st.session_state.uploaded_file
+selected_speaker = st.session_state.selected_speaker
+selected_benchmark = st.session_state.selected_benchmark
 
-    # Ensure session state is correctly set up for the view
-    if "range_option" not in st.session_state:
-        st.session_state.range_option = "1D"
+def handle_question(vectorstore, llm):
+    user_input = st.session_state.chat_input.strip()
+    if not user_input:
+        return
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        chain_type="stuff"
+    )
+    answer = qa_chain.run(user_input)
+    st.session_state.chat_history.append({"role": "ai", "content": answer})
+    st.session_state.chat_input = ""
 
-    range_options = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"]
-    range_map = {
-        "1D":  ("1d", "5m"),
-        "5D":  ("5d", "15m"),
-        "1M":  ("1mo", "30m"),
-        "6M":  ("6mo", "1d"),
-        "YTD": ("ytd", "1d"),
-        "1Y":  ("1y", "1d"),
-        "5Y":  ("5y", "1wk"),
-        "MAX": ("max", "1mo")
+# --- Benchmark Analysis ---
+if view_mode == "Benchmark Analysis" and selected_benchmark:
+    years = list(range(2015, 2025))
+    prices = {
+        "MSFT": [40.12, 52.12, 74.22, 101.57, 134.92, 157.70, 222.42, 295.44, 313.85, 375.62],
+        "VGT":  [90.23, 108.87, 137.26, 170.03, 209.88, 238.65, 309.11, 358.74, 388.67, 420.95],
+        "GOOGL":[30.42, 39.10, 52.88, 74.91, 100.21, 124.34, 151.77, 137.85, 141.12, 160.54],
+        "AAPL": [14.25, 18.95, 28.61, 39.25, 55.56, 73.41, 101.67, 126.03, 162.32, 189.21],
+        "AMZN": [312.65, 351.22, 389.61, 442.30, 497.22, 535.65, 566.74, 603.18, 625.44, 678.92]
     }
 
-    range_option = st.session_state.range_option
-    period, interval = range_map[range_option]
+    def compute_yoy_growth(prices):
+        return [None] + [round(((curr - prev) / prev) * 100, 2) for prev, curr in zip(prices[:-1], prices[1:])]
 
-    if ticker:
-        try:
-            stock = yf.Ticker(ticker.upper())
-            data = stock.history(period=period, interval=interval)
-            info = stock.info
+    msft_prices = prices["MSFT"]
+    selected_prices = prices[selected_benchmark]
+    msft_growth = compute_yoy_growth(msft_prices)
+    selected_growth = compute_yoy_growth(selected_prices)
 
-            if data.empty or "regularMarketPrice" not in info:
-                st.error("Could not retrieve market data for this ticker. Please check the symbol or try again later.")
-            else:
-                # Display Stock Information
-                company_name = info.get("longName", ticker.upper())
-                current_price = info.get("regularMarketPrice")
-                open_price = info.get("regularMarketOpen")
-                high = info.get("dayHigh")
-                low = info.get("dayLow")
-                volume = info.get("volume")
-                year_high = info.get("fiftyTwoWeekHigh")
-                year_low = info.get("fiftyTwoWeekLow")
+    df = pd.DataFrame({
+        "Year": years,
+        "MSFT Price": msft_prices,
+        "MSFT YoY Growth (%)": msft_growth,
+        f"{selected_benchmark} Price": selected_prices,
+        f"{selected_benchmark} YoY Growth (%)": selected_growth
+    })
 
-                price_diff = current_price - open_price
-                percent = (price_diff / open_price) * 100 if open_price else 0
-                arrow = "+" if price_diff > 0 else "-"
-                color = "green" if price_diff > 0 else "red"
+    df_formatted = df.copy()
+    for col in df_formatted.columns:
+        if "Growth" in col:
+            df_formatted[col] = df_formatted[col].apply(lambda x: f"{x}%" if pd.notnull(x) else "—")
 
-                st.markdown(f"### **{company_name} ({ticker.upper()})**")
+    styled_html = (
+        "<style>"
+        "table { width: 100%; border-collapse: collapse; background-color: white; color: black; }"
+        "th, td { padding: 8px 12px; font-weight: bold; border: 1px solid #ddd; }"
+        "th { background-color: #f0f0f0 !important; text-align: center !important; }"
+        "thead th { text-align: center !important; }"
+        "td { text-align: center; }"
+        "</style>"
+        + df_formatted.to_html(index=False, escape=False)
+    )
 
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.markdown(
-                        f"<h1 style='color:black;'>${current_price:.2f} "
-                        f"<span style='color:{color}; font-size:1.5rem'>{arrow}{abs(price_diff):.2f} "
-                        f"({arrow}{abs(percent):.2f}%)</span></h1>",
-                        unsafe_allow_html=True
-                    )
-                with col2:
-                    range_option = st.selectbox("", options=range_options, index=range_options.index(range_option), key="range_option", label_visibility="collapsed")
+    st.markdown(f"### Annual Price & Growth: {selected_benchmark} vs MSFT (2014–2024)")
+    st.markdown(styled_html, unsafe_allow_html=True)
 
-                st.line_chart(data['Close'])
+    msft_total = round(((msft_prices[-1] - msft_prices[0]) / msft_prices[0]) * 100, 2)
+    selected_total = round(((selected_prices[-1] - selected_prices[0]) / selected_prices[0]) * 100, 2)
 
-                st.markdown("#### Key Metrics")
-                st.markdown(f"- **Open**: {open_price}")
-                st.markdown(f"- **Day Range**: {low} - {high}")
-                st.markdown(f"- **52 Week Range**: {year_low} - {year_high}")
-                st.markdown(f"- **Volume**: {volume}")
+    if selected_total > msft_total:
+        insight = f"{selected_benchmark} outperformed MSFT from 2014 to 2024 with a total growth of {selected_total}% vs {msft_total}%."
+    elif selected_total < msft_total:
+        insight = f"MSFT outperformed {selected_benchmark} from 2014 to 2024 with a total growth of {msft_total}% vs {selected_total}%."
+    else:
+        insight = f"{selected_benchmark} and MSFT had equal growth of {msft_total}% over the 10-year period."
 
-                st.markdown("#### Latest News Headlines")
-                try:
-                    news_feed = feedparser.parse(f"https://news.google.com/rss/search?q={ticker}+stock")
-                    headlines = [entry.title for entry in news_feed.entries[:3]]
-                    news_summary = "\n".join([f"- {line}" for line in headlines])
-                    for line in headlines:
-                        st.markdown(f"- {line}")
-                except Exception as e:
-                    st.warning(f"News fetch failed: {e}")
+    st.markdown("#### Key Insights")
+    st.markdown(f"<div style='color:black; font-size:16px'>{insight}</div>", unsafe_allow_html=True)
+    
+# --- Risk Analysis ---
+if view_mode == "Risk Analysis" and selected_benchmark:
+    st.markdown(f"### Risk Assessment: {selected_benchmark}")
 
-                # LLM Summary
-                if "llm" in locals():
-                    try:
-                        market_summary_prompt = f"""
-                        As of today, summarize the current market status of {ticker.upper()} using the following context:
+    risk_insights = {
+        "AMZN": [
+            "Regulatory pressure on cloud and AI services.",
+            "Dependence on enterprise contracts for revenue stability.",
+            "High valuation may limit upside during market corrections."
+        ],
+        "AAPL": [
+            "Heavy reliance on iPhone sales for majority of revenue.",
+            "Supply chain concentration in China.",
+            "Slower innovation cycles in recent years."
+        ],
+        "GOOGL": [
+            "Ad revenue vulnerability to macroeconomic cycles.",
+            "Rising competition in AI and cloud segments.",
+            "Ongoing antitrust scrutiny in U.S. and EU."
+        ],
+        "VGT": [
+            "Broad tech exposure provides diversification.",
+            "Lower company-specific risk than individual stocks.",
+            "Still subject to sector-wide downturns but mitigated by ETF structure."
+        ]
+    }
 
-                        1. **Stock Price & Movement**:
-                            - Price: {current_price}
-                            - Day Range: {low} - {high}
-                            - 52 Week Range: {year_low} - {year_high}
-                            - Volume: {volume}
-                            - Open: {open_price}
-                            - Price Change: {price_diff:+.2f}, Percent Change: {percent:+.2f}%
+    st.markdown("#### Identified Risks")
+    for risk in risk_insights[selected_benchmark]:
+        st.markdown(f"- {risk}", unsafe_allow_html=True)
 
-                        2. **Recent Financials**:
-                            - Revenue (2024): $245.12B (+15.67% YoY)
-                            - Earnings (2024): $88.14B (+21.8% YoY)
+    if selected_benchmark == "VGT":
+        st.markdown("#### Summary")
+        st.markdown(
+            "<div style='color:black; font-size:16px'>"
+            "VGT offers a more balanced risk profile by diversifying across multiple tech leaders, "
+            "reducing exposure to individual company setbacks while still capturing overall sector growth."
+            "</div>",
+            unsafe_allow_html=True
+        )
+        
+if view_mode == "Recommendations":
 
-                        3. **Analyst Insights**:
-                            - Analyst Target Price: {info.get("targetMeanPrice", "N/A")}
-                            - Analyst Rating: {info.get("recommendationKey", "N/A")}
+    st.markdown("""
+    <ul style='font-size:16px; color:black; padding-left:1rem; line-height:1.8'>
+        <li><span style='font-weight:bold'>Think long-term</span>: Successful investing requires patience and discipline over decades, not months.</li>
+        <li><span style='font-weight:bold'>Stay diversified</span>: Broad diversification reduces risk and helps capture market returns.</li>
+        <li><span style='font-weight:bold'>Minimize costs</span>: Lower fees mean you keep more of your investment returns.</li>
+        <li><span style='font-weight:bold'>Stay the course</span>: Avoid emotional decisions during market swings—stick to your plan.</li>
+        <li><span style='font-weight:bold'>Focus on what you can control</span>: Set clear goals, choose the right asset mix, and rebalance as needed.</li>
+    </ul>
+    """, unsafe_allow_html=True)
 
-                        4. **News Headlines**:
-                        {news_summary}
 
-                        Provide a concise, professional ~120-word financial analysis covering:
-                        - Current sentiment and stock movement
-                        - Analyst outlook
-                        - Economic or industry factors
-                        - Risks or catalysts ahead
-                        """
-                        st.markdown("#### LLM Market Summary")
-                        llm_response = llm.predict(market_summary_prompt)
-                        st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
-                    except Exception as e:
-                        st.error(f"LLM summary generation failed: {e}")
-        except Exception as e:
-            st.error(f"Error fetching data: {e}")
+
 
 # --- Transcript + Speaker Summary ---
-if view_mode == "Speaker Analysis" and uploaded_file:
+if uploaded_file and not selected_benchmark:
     pdf_bytes = BytesIO(uploaded_file.getvalue())
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
         raw_text = "".join([page.get_text() for page in doc])

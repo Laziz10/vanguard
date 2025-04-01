@@ -50,6 +50,13 @@ st.markdown("""
 st.image("vanguard_logo.png", width=180)
 st.markdown("<div style='margin-bottom: 1rem'></div>", unsafe_allow_html=True)
 
+def load_css():
+    try:
+        with open("style.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except:
+        pass
+load_css()
 
 openai_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 os.environ["OPENAI_API_KEY"] = openai_key

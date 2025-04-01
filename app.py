@@ -640,7 +640,7 @@ Write a concise comparison.
         tools=tools,
         llm=ChatOpenAI(temperature=0),
         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        verbose=True,
+        verbose=False,
         handle_parsing_errors=True  # ✅ Add this line
     )
 

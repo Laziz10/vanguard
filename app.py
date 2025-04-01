@@ -16,6 +16,18 @@ from langchain.chat_models import ChatOpenAI
 if "llm" not in locals():
     llm = ChatOpenAI(temperature=0)
 from langchain.chains import RetrievalQA
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
+
+# Initialize memory once
+if "market_memory" not in st.session_state:
+    st.session_state.market_memory = ConversationBufferMemory(return_messages=True)
+# Initialize the conversation chain once
+if "market_llm_chain" not in st.session_state:
+    st.session_state.market_llm_chain = ConversationChain(
+        llm=llm,
+        memory=st.session_state.market_memory,
+        verbose=False)
 
 import yfinance as yf
 import datetime
@@ -276,6 +288,22 @@ if view_mode == "Speaker Analysis" and uploaded_file:
 
 # --- Market Analysis ---
 
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
+
+# Initialize memory once
+if "market_memory" not in st.session_state:
+    st.session_state.market_memory = ConversationBufferMemory(return_messages=True)
+
+# Initialize the conversation chain once
+if "market_llm_chain" not in st.session_state:
+    st.session_state.market_llm_chain = ConversationChain(
+        llm=llm,
+        memory=st.session_state.market_memory,
+        verbose=False
+    )
+
+# --- Market Analysis ---
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
 
@@ -285,7 +313,6 @@ if view_mode == "Market Analysis":
         st.session_state.range_option = "1D"
 
     range_options = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"]
-
     range_map = {
         "1D":  ("1d", "5m"),
         "5D":  ("5d", "15m"),
@@ -334,7 +361,12 @@ if view_mode == "Market Analysis":
                         unsafe_allow_html=True
                     )
                 with col2:
-                    range_option = st.selectbox("", options=range_options, index=range_options.index(range_option), key="range_option", label_visibility="collapsed")
+                    range_option = st.selectbox(
+                        "", options=range_options,
+                        index=range_options.index(range_option),
+                        key="range_option",
+                        label_visibility="collapsed"
+                    )
 
                 st.line_chart(data['Close'])
 
@@ -389,35 +421,30 @@ Provide a concise, professional ~120-word financial analysis covering:
                         llm_response = llm.predict(market_summary_prompt)
                         st.markdown(f"<div style='color:black; font-size:16px'>{llm_response}</div>", unsafe_allow_html=True)
 
-                        # Chatbot
-                        st.markdown("#### Ask a Question About This Stock")
-                        question = st.text_input("Ask your question about this stock (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
+                        # 🧠 Chatbot with memory
+                        st.markdown("#### 💬 Ask a Question About This Stock")
+                        question = st.text_input("Ask your question (e.g., 'What are the risks for MSFT?')", key="stock_chat_input")
+
                         if question:
                             try:
-                                chatbot_prompt = f"""
-You are a helpful financial assistant. Answer the following question using the information below about {ticker.upper()}:
-
-Company Info:
-- Name: {company_name}
-- Current Price: ${current_price}
-- Day Range: {low} - {high}
-- 52 Week Range: {year_low} - {year_high}
-- Volume: {volume}
-- Analyst Target Price: {info.get('targetMeanPrice', 'N/A')}
-- Analyst Rating: {info.get('recommendationKey', 'N/A')}
-- Summary: {info.get('longBusinessSummary', '')[:800]}
-
-Recent News:
-{news_summary}
-
-User Question: {question}
-
-Answer:
-                                """
-                                chatbot_response = llm.predict(chatbot_prompt)
-                                st.markdown(f"<div style='color:black; font-size:16px'>{chatbot_response}</div>", unsafe_allow_html=True)
+                                intro = f"You are a helpful financial assistant. The user is asking about {ticker.upper()} and has seen its key metrics and news."
+                                full_prompt = f"{intro}\n\nUser: {question}"
+                                response = st.session_state.market_llm_chain.run(full_prompt)
+                                st.markdown(f"<div style='color:black; font-size:16px'>{response}</div>", unsafe_allow_html=True)
                             except Exception as e:
                                 st.error(f"Chatbot failed to generate response: {e}")
+
+                        # Optional: Clear conversation memory
+                        if st.button("🗑️ Clear Chat Memory"):
+                            st.session_state.market_memory.clear()
+                            st.success("Chat memory cleared!")
+
+                        # Optional: Show memory
+                        with st.expander("🧾 Conversation History"):
+                            for msg in st.session_state.market_memory.chat_memory.messages:
+                                role = msg.type.capitalize()
+                                st.markdown(f"**{role}:** {msg.content}")
+
                     except Exception as e:
                         st.error(f"LLM summary generation failed: {e}")
         except Exception as e:

@@ -474,7 +474,7 @@ if view_mode == "Digital Advisor":
                 "market_cap": info.get("marketCap", "N/A")
             }
 
-        comparison = f"### Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
+        comparison = f"### 📊 Stock Comparison: {tickers[0]} vs {tickers[1]}\n"
         for ticker, data in stock_data.items():
             comparison += f"**{ticker}**\n"
             comparison += f"- Price: ${data['price']}\n"
@@ -485,19 +485,6 @@ if view_mode == "Digital Advisor":
 
     except Exception as e:
         return f"Comparison failed due to: {e}"
-
-    def extract_risks(input: str) -> str:
-        return f"Here are extracted risk factors based on: {input}"  # Replace with RAG + filtering logic
-
-    def fetch_metrics(input: str) -> str:
-        try:
-            import yfinance as yf
-            ticker = input.upper() if input else "MSFT"
-            stock = yf.Ticker(ticker)
-            info = stock.info
-            return f"{ticker} - Current Price: {info.get('regularMarketPrice')}, P/E Ratio: {info.get('trailingPE')}"
-        except Exception as e:
-            return f"Failed to fetch metrics for {input}: {e}"
 
     from langchain.agents import Tool, initialize_agent
 

@@ -89,7 +89,7 @@ if view_mode == "Speaker Analysis":
     )
     st.session_state.selected_speaker = selected_speaker
     st.session_state.selected_benchmark = None
-
+    
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
 

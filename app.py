@@ -306,7 +306,7 @@ if view_mode == "Speaker Analysis" and uploaded_file:
 if view_mode == "Market Analysis":
     st.markdown("### Market Analysis")
 
-    ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)", value="MSFT")
+    ticker = st.text_input("Enter a Stock Ticker (e.g., MSFT, AAPL, GOOGL)")
 
     if "range_option" not in st.session_state:
         st.session_state.range_option = "1D"

@@ -666,7 +666,6 @@ user_query = st.text_input("", key="advisor_query")
 if user_query:
     with st.spinner("Thinking like a Digital Advisor..."):
         try:
-            st_callback = StreamlitCallbackHandler(st.container())  # this adds the live steps output
             result = digital_agent.run(user_query, callbacks=[st_callback])
             st.markdown("### Digital Advisor Response")
             st.markdown(result)

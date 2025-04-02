@@ -617,6 +617,11 @@ Write a concise comparison.
 
     tools = [
         Tool(
+            name="CompareTranscripts",
+            func=compare_transcripts,
+            description="Compare two uploaded earnings call transcripts. Input should be like: 'Compare Google and Microsoft transcripts.'"
+        ),
+        Tool(
             name="SummarizeTranscript",
             func=summarize_transcript,
             description="Summarize one or more uploaded earnings call transcripts."

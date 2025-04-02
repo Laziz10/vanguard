@@ -662,11 +662,11 @@ if st.button("Clear Advisor Memory"):
 # --- User Query ---
 user_query = st.text_input("", key="advisor_query")
 
-
 if user_query:
     with st.spinner("Thinking like a Digital Advisor..."):
         try:
-            result = digital_agent.run(user_query, callbacks=[st_callback])
+            # No callback = no agent reasoning in output
+            result = digital_agent.run(user_query)
             st.markdown("### Digital Advisor Response")
             st.markdown(result)
         except Exception as e:

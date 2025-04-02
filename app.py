@@ -649,16 +649,7 @@ Write a concise comparison.
     handle_parsing_errors=True,
     memory=memory  # Inject memory here
 )
-
-with st.expander("Conversation History"):
-    for msg in memory.chat_memory.messages:
-        role = msg.type.capitalize()
-        st.markdown(f"**{role}:** {msg.content}")
-
-if st.button("Clear Advisor Memory"):
-    memory.clear()
-    st.success("Conversation memory cleared.")
-
+    
 # --- User Query ---
 user_query = st.text_input("", key="advisor_query")
 
@@ -671,6 +662,16 @@ if user_query:
             st.markdown(result)
         except Exception as e:
             st.error(f"Agent failed: {e}")
+
+with st.expander("Conversation History"):
+    for msg in memory.chat_memory.messages:
+        role = msg.type.capitalize()
+        st.markdown(f"**{role}:** {msg.content}")
+
+if st.button("Clear Advisor Memory"):
+    memory.clear()
+    st.success("Conversation memory cleared.")
+
 
 # --- Benchmark Analysis ---
 if view_mode == "Benchmark Analysis" and selected_benchmark:

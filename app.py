@@ -650,27 +650,27 @@ Write a concise comparison.
     memory=memory  # Inject memory here
 )
     
-# --- User Query ---
-user_query = st.text_input("", key="advisor_query")
+    # --- User Query ---
+    user_query = st.text_input("", key="advisor_query")
 
-if user_query:
-    with st.spinner("Thinking like a Digital Advisor..."):
-        try:
-            # No callback = no agent reasoning in output
-            result = digital_agent.run(user_query)
-            st.markdown("### Digital Advisor Response")
-            st.markdown(result)
-        except Exception as e:
-            st.error(f"Agent failed: {e}")
+    if user_query:
+        with st.spinner("Thinking like a Digital Advisor..."):
+            try:
+                # No callback = no agent reasoning in output
+                result = digital_agent.run(user_query)
+                st.markdown("### Digital Advisor Response")
+                st.markdown(result)
+            except Exception as e:
+                st.error(f"Agent failed: {e}")
 
-with st.expander("Conversation History"):
-    for msg in memory.chat_memory.messages:
-        role = msg.type.capitalize()
-        st.markdown(f"**{role}:** {msg.content}")
+    with st.expander("Conversation History"):
+        for msg in memory.chat_memory.messages:
+            role = msg.type.capitalize()
+            st.markdown(f"**{role}:** {msg.content}")
 
-if st.button("Clear Advisor Memory"):
-    memory.clear()
-    st.success("Conversation memory cleared.")
+    if st.button("Clear Advisor Memory"):
+        memory.clear()
+        st.success("Conversation memory cleared.")
 
 
 # --- Benchmark Analysis ---
